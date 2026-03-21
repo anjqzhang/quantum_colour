@@ -1,4 +1,8 @@
-# One-Qubit Quantum Game Prototype
+# Colour Mixer, a quantum game
+
+This is a game designed to introduce basic quantum operations and measurements. Players are given a set of basic colours (aka the bases set), a starting colour (initial state), and a handful of mixer magics (quatum gates) that allow them to perform state flips, rotations, superpositionsm and entanglements. The aim is to generate the target colour using any combination of magics.
+
+## Prototype
 
 This prototype starts from the backend state `|0>`, presents that to the player as `black`, lets the player enter single-qubit gates, writes a QASM file, sends that circuit to Quokka for repeated measurements, and checks analytically whether the final state matches the target colour.
 
@@ -7,9 +11,10 @@ When the game starts, it asks the player which mode to enter:
 - `Level 1`: start from black, target black, at most 3 gates, using `I` and `X`.
 - `Level 2`: start from black, target white, at most 3 gates, using `I` and `X`.
 - `Level 3`: start from black, target gray, at most 3 gates, using `I`, `X`, and `H`.
-- `Playground`: no target check, up to 10 gates, using the full prototype gate set.
 
 These modes are defined in separate text files under [levels](./levels), so adding a new level is just a matter of creating another `.txt` file with the same fields.
+
+## Playground
 
 ## Run the game
 
