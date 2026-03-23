@@ -1,6 +1,6 @@
-# Level 1 configuration
+# Level 1 : Identity
 id: 1
-title: Level 1
+title: Level 1 - Identity
 description: Start from black and reach black in at most 3 gates.
 target: black
 max_gates: 3

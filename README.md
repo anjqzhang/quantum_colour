@@ -2,9 +2,15 @@
 
 This is a game designed to introduce basic quantum operations and measurements. Players are given a set of basic colours (aka the bases set), a starting colour (initial state), and a handful of mixer magics (quatum gates) that allow them to perform state flips, rotations, superpositionsm and entanglements. The aim is to generate the target colour using any combination of magics.
 
+## AI disclaimer
+
+OpenAI codex was used to write part of the functions, and was involved in debugging. All code is reviewed by human.
+
+The game mechanism and the levels are purely done by human.
+
 ## Prototype
 
-This prototype starts from the backend state `|0>`, presents that to the player as `black`, lets the player enter single-qubit gates, writes a QASM file, sends that circuit to Quokka for repeated measurements, and checks analytically whether the final state matches the target colour.
+This prototype is a one-qubit model with two basis states, `|0>` representing black and `|1>` representing white. Three levels are designed to introduce the three most basic magics.
 
 When the game starts, it asks the player which mode to enter:
 
@@ -12,43 +18,44 @@ When the game starts, it asks the player which mode to enter:
 - `Level 2`: start from black, target white, at most 3 gates, using `I` and `X`.
 - `Level 3`: start from black, target gray, at most 3 gates, using `I`, `X`, and `H`.
 
-These modes are defined in separate text files under [levels](./levels), so adding a new level is just a matter of creating another `.txt` file with the same fields.
+The levels are defined in [levels](./levels).
+
+In each level, player will have access to ristricted magics, and can only input no more than a certain number of magics.
+
+There is no "standard answer" - use any combination of magics within the constraints to create target colour and you will get a YAY!
 
 ## Playground
 
-## Run the game
+There's no target here. Default starting colour is black. Apply any magic available to create your own superposition! Maximum 10 magics.
 
-Interactive mode:
+## Play the game
+
+Interactive levels:
 
 ```bash
 python3 quantum_game.py
 ```
 
-Direct single round:
+Custom mode single round:
 
 ```bash
-python3 quantum_game.py --target white --gates "X" --shots 200
+python3 quantum_game.py --start black --target white --gates "X" --shots 500
 ```
 
-Direct single round with a superposition target:
+Custom mode with a superposition target:
 
 ```bash
-python3 quantum_game.py --target gray --gates "H" --shots 200
+python3 quantum_game.py --start black --target 50/50 --gates "H" --shots 500
 ```
 
-## What it prints
+Custom mode with a custom black/white superposition:
 
-- The target colour and the gates the player chose.
-- The path to the generated QASM file.
-- The path to a measurement plot PNG.
-- A measurement distribution over `black` and `white`.
-- A colour strip where `.` means `black` and `o` means `white`.
-- A final `YAY` or `NAY` based on the hidden analytic check, except in playground mode.
+```bash
+python3 quantum_game.py --start 70/30 --target 30/70 --gates "X" --shots 500
+```
 
 ## Notes
 
-- Supported gates: `I`, `X`, `Y`, `Z`, `H`, `S`, `T`.
-- QASM is written to the prototype's `generated/player_circuit.qasm` by default.
-- The measurement cloud is written to the prototype's `generated/player_circuit_measurements.png` by default.
-- Black dots represent the black result, white dots represent the white result, and alpha blending lets overlaps appear gray.
-- If Quokka is unavailable, the script can fall back to local sampling from the analytic probabilities unless you pass `--no-local-fallback`.
+- Supported gates: `I`, `X`, `Y`, `Z`, `H`, `S`, `T`. (More gates coming in full version)
+- Custom mode accepts `black`, `white`, `gray`, or a ratio like `70/30` for both `--start` and `--target`.
+- Quokka access is required for measurements.

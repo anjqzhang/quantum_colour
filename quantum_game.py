@@ -79,12 +79,46 @@ def parse_gate_input(raw_text: str):
         raise ValueError(f"Unsupported gate(s): {', '.join(invalid)}. Supported gates: {supported}.")
     return pgates
 
+def format_ratio_label(black_weight: float, white_weight: float) -> str:
+    black_pct = black_weight * 100
+    white_pct = white_weight * 100
+    if np.isclose(black_pct, round(black_pct)) and np.isclose(white_pct, round(white_pct)):
+        return f"{int(round(black_pct))}/{int(round(white_pct))}"
+    return f"{black_pct:.1f}/{white_pct:.1f}"
 
-def normalize_target_choice(raw_text: str) -> str:
-    target = raw_text.strip().lower()
-    if target not in TARGET_ALIASES:
-        raise ValueError("Please choose black, white, or gray.")
-    return TARGET_ALIASES[target]
+
+def parse_colour_state(raw_text: str) -> tuple[np.ndarray, str]:
+    raw_value = raw_text.strip()
+    normalized = raw_value.lower()
+    if normalized in TARGET_ALIASES:
+        canonical = TARGET_ALIASES[normalized]
+        return TARGET_STATES[canonical], STATE_NAMES[canonical]
+
+    match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*/\s*([0-9]*\.?[0-9]+)\s*", raw_value)
+    percent_match = re.fullmatch(
+        r"\s*([0-9]*\.?[0-9]+)\s*%?\s*black\s*[-/]\s*([0-9]*\.?[0-9]+)\s*%?\s*white\s*",
+        normalized,
+    )
+    if match:
+        black_weight = float(match.group(1))
+        white_weight = float(match.group(2))
+    elif percent_match:
+        black_weight = float(percent_match.group(1))
+        white_weight = float(percent_match.group(2))
+    else:
+        raise ValueError("Please choose black, white, gray, or a ratio like 70/30.")
+
+    total = black_weight + white_weight
+    if total <= 0:
+        raise ValueError("The black/white ratio must add up to more than zero.")
+
+    black_probability = black_weight / total
+    white_probability = white_weight / total
+    state = np.array([np.sqrt(black_probability), np.sqrt(white_probability)], dtype=complex)
+    label = format_ratio_label(black_probability, white_probability)
+    if np.isclose(black_probability, 0.5) and np.isclose(white_probability, 0.5):
+        label = f"{label} (gray)"
+    return state, label
 
 
 def normalize_level_choice(raw_text: str) -> str:
@@ -115,8 +149,12 @@ def parse_level_file(level_path: Path) -> dict:
     if invalid_gates:
         raise ValueError(f"Unsupported gates in {level_path.name}: {', '.join(invalid_gates)}")
 
-    target_value = config["target"].strip().lower()
-    target_label = None if target_value == "none" else normalize_target_choice(target_value)
+    target_value = config["target"].strip()
+    if target_value.lower() == "none":
+        target_state = None
+        target_label = None
+    else:
+        target_state, target_label = parse_colour_state(target_value)
 
     aliases = [alias.strip().lower() for alias in config["aliases"].split(",") if alias.strip()]
     if not aliases:
@@ -130,6 +168,7 @@ def parse_level_file(level_path: Path) -> dict:
         "allowed_gates": allowed_gates,
         "order": int(config["order"]),
         "aliases": aliases,
+        "target_state": target_state,
         "target_label": target_label,
         "file_name": level_path.name,
     }
@@ -177,13 +216,19 @@ def apply_gates(gates: Iterable[str], start_state: np.ndarray | None = None) -> 
     return state
 
 
-def build_qasm(gates: Iterable[str]) -> str:
+def build_qasm(gates: Iterable[str], start_state: np.ndarray | None = None) -> str:
     lines = [
         "OPENQASM 2.0;",
         "qreg q[1];",
         "creg c[1];",
     ]
+    initial_state = np.array(start_state if start_state is not None else INITIAL_STATE, dtype=complex)
+    if not np.allclose(initial_state, INITIAL_STATE):
+        theta = 2 * np.arctan2(np.abs(initial_state[1]), np.abs(initial_state[0]))
+        lines.append(f"ry({theta:.12f}) q[0];")
     for gate_name in gates:
+        if gate_name == "I":
+            continue
         lines.append(f"{gate_name.lower()} q[0];")
     lines.append("measure q[0] -> c[0];")
     return "\n".join(lines) + "\n"
@@ -206,43 +251,54 @@ def normalize_measurements(raw_measurements) -> List[int]:
 
     shots: List[int] = []
     for measurement in raw_measurements:
-        if isinstance(measurement, list) and measurement:
-            shots.append(int(measurement[0]))
-        elif isinstance(measurement, str) and measurement:
-            shots.append(int(measurement[0]))
+        if isinstance(measurement, int):
+            if measurement in (0, 1):
+                shots.append(measurement)
+            else:
+                raise ValueError(f"Unexpected measurement value: {measurement}")
+        elif isinstance(measurement, list) and len(measurement) == 1:
+            bit_value = measurement[0]
+            if isinstance(bit_value, int) and bit_value in (0, 1):
+                shots.append(bit_value)
+            else:
+                raise ValueError(f"Unexpected measurement value: {measurement}")
         else:
-            shots.append(int(measurement))
+            raise ValueError(f"Unexpected measurement value: {measurement}")
+
     return shots
 
 
-def sample_measurements_locally(state: np.ndarray, shots: int) -> List[int]:
-    probabilities = np.abs(state) ** 2
-    return list(np.random.choice([0, 1], size=shots, p=probabilities))
+def extract_quokka_measurements(response_payload) -> List[int]:
+
+    if isinstance(response_payload.get("result"), dict) and "c" in response_payload["result"]:
+        return normalize_measurements(response_payload["result"]["c"])
+
+    if "c" in response_payload:
+        return normalize_measurements(response_payload["c"])
+
+    if isinstance(response_payload.get("data"), dict) and "c" in response_payload["data"]:
+        return normalize_measurements(response_payload["data"]["c"])
+
+    raise ValueError(f"Unexpected Quokka response payload: {response_payload}")
 
 
-def send_to_quokka(program: str, shots: int, quokka_name: str = "quokka1") -> List[int]:
-    request_http = f"http://{quokka_name}.quokkacomputing.com/qsim/qasm"
-    payload = {
+def send_to_quokka(program: str, count: int, my_quokka: str = "quokka2") -> List[int]:
+    request_http = f"http://{my_quokka}.quokkacomputing.com/qsim/qasm"
+    data = {
         "script": program,
-        "count": shots,
+        "count": count,
     }
-    response = requests.post(request_http, json=payload, verify=False, timeout=30)
+    response = requests.post(request_http, json=data, verify=False)
     response.raise_for_status()
-    json_obj = json.loads(response.content)
-    return normalize_measurements(json_obj["result"]["c"])
+    json_obj = response.json()
+    obj = extract_quokka_measurements(json_obj)
+    return obj
 
-
-def collect_measurements(program: str, state: np.ndarray, shots: int, quokka_name: str, allow_local_fallback: bool):
+def collect_measurements(program: str, shots: int, quokka_name: str):
     try:
-        return send_to_quokka(program, shots, quokka_name), "Quokka", None
+        return send_to_quokka(program, count = shots, my_quokka=quokka_name)
     except Exception as exc:
-        if not allow_local_fallback:
-            raise RuntimeError(f"Quokka request failed: {exc}") from exc
-        return (
-            sample_measurements_locally(state, shots),
-            "Local fallback",
-            "Quokka was unavailable, so these shots were sampled from the analytic probabilities.",
-        )
+        raise RuntimeError(f"Quokka request failed: {exc}") from exc
 
 
 def measurement_counts(measurements: Iterable[int]) -> dict[str, int]:
@@ -269,7 +325,7 @@ def plot_measurements(measurements: Iterable[int], plot_path: Path) -> Path:
     ys = rng.uniform(0.02, 0.98, size=len(measurements))
 
     fig, ax = plt.subplots(figsize=(2, 2), dpi=180)
-    fig.patch.set_facecolor("#d7d7d7")
+    fig.set_facecolor("#d7d7d7")
     ax.set_facecolor("#d7d7d7")
 
     for bit in (0, 1):
@@ -296,17 +352,9 @@ def plot_measurements(measurements: Iterable[int], plot_path: Path) -> Path:
         spine.set_linewidth(1.0)
 
     ax.set_title("Measured Colours", fontsize=12, color="#222222", pad=8)
-    ax.text(
-        0.02,
-        -0.12,
-        "Black and white dots overlap into gray",
-        transform=ax.transAxes,
-        fontsize=8,
-        color="#333333",
-    )
 
     fig.tight_layout()
-    fig.savefig(plot_path, bbox_inches="tight")
+    fig.savefig(str(plot_path), bbox_inches="tight")
     plt.close(fig)
     return plot_path
 
@@ -325,36 +373,33 @@ def build_dot_strip(measurements: Iterable[int], max_dots: int = 60) -> str:
 
 def print_round_report(
     mode_name: str,
-    target_label: str,
+    start_label: str,
+    target_label: str | None,
+    target_state: np.ndarray | None,
     gates: List[str],
     state: np.ndarray,
     measurements: List[int],
-    source_label: str,
     qasm_path: Path,
     plot_path: Path,
-    measurement_note: str | None,
 ):
     counts = measurement_counts(measurements)
     total = len(measurements)
-    success = None if target_label is None else states_match_up_to_global_phase(state, TARGET_STATES[target_label])
+    success = None if target_state is None else states_match_up_to_global_phase(state, target_state)
 
     print()
     print("Round result")
     print(f"Mode: {mode_name}")
-    print("Starting colour: black")
+    print(f"Starting colour: {start_label}")
     if target_label is None:
         print("Target colour: none in playground mode")
     else:
-        print(f"Target colour: {state_name(target_label)}")
+        print(f"Target colour: {target_label}")
     print(f"Gates used: {' '.join(gates) if gates else '(none)'}")
     print(f"QASM file: {qasm_path}")
     print(f"Measurement plot: {plot_path}")
     print()
-    print(f"Measurements from {source_label}:")
-    print(f"Black: {counts['0']:>4}/{total} = {counts['0'] / total:6.1%}")
-    print(f"White: {counts['1']:>4}/{total} = {counts['1'] / total:6.1%}")
-    if measurement_note:
-        print(f"Note: {measurement_note}")
+    # print(f"Black: {counts['0']:>4}/{total} = {counts['0'] / total:6.1%}")
+    # print(f"White: {counts['1']:>4}/{total} = {counts['1'] / total:6.1%}")
     print("Colour strip (. = black, o = white):")
     print(build_dot_strip(measurements))
     print()
@@ -367,25 +412,35 @@ def print_round_report(
 
 def run_round(
     mode_name: str,
+    start_state: np.ndarray,
+    start_label: str,
+    target_state: np.ndarray | None,
     target_label: str | None,
     gate_text: str,
     shots: int,
     quokka_name: str,
     qasm_path: Path,
-    allow_local_fallback: bool,
     allowed_gates: List[str] | None = None,
     max_gates: int | None = None,
 ):
     gates = parse_gate_input(gate_text)
     validate_gate_sequence(gates, allowed_gates=allowed_gates, max_gates=max_gates)
-    state = apply_gates(gates)
-    program = build_qasm(gates)
+    state = apply_gates(gates, start_state=start_state)
+    program = build_qasm(gates, start_state=start_state)
     write_qasm(program, qasm_path)
-    measurements, source_label, measurement_note = collect_measurements(
-        program, state, shots, quokka_name, allow_local_fallback
-    )
+    measurements= collect_measurements(program, shots, quokka_name)
     plot_path = plot_measurements(measurements, default_plot_path(qasm_path))
-    print_round_report(mode_name, target_label, gates, state, measurements, source_label, qasm_path, plot_path, measurement_note)
+    print_round_report(
+        mode_name,
+        start_label,
+        target_label,
+        target_state,
+        gates,
+        state,
+        measurements,
+        qasm_path,
+        plot_path
+    )
 
 
 def print_gate_help(allowed_gates: List[str]):
@@ -445,8 +500,8 @@ def prompt_next_action() -> str:
 
 
 def interactive_game(args):
-    print("One-Qubit Quantum Game Prototype")
-    print("Goal: start from black, choose a level, and use quantum gates to reach the target colour.")
+    print("Quantum Colour Mixer - Prototype")
+    print("Choose a level and use quantum gates to reach the target colour.")
     print()
 
     while True:
@@ -458,12 +513,14 @@ def interactive_game(args):
             gate_text = prompt_gate_text(level["allowed_gates"], level["max_gates"])
             run_round(
                 mode_name=level["title"],
+                start_state=INITIAL_STATE,
+                start_label="black",
+                target_state=level["target_state"],
                 target_label=level["target_label"],
                 gate_text=gate_text,
                 shots=args.shots,
                 quokka_name=args.quokka,
                 qasm_path=Path(args.output),
-                allow_local_fallback=not args.no_local_fallback,
                 allowed_gates=level["allowed_gates"],
                 max_gates=level["max_gates"],
             )
@@ -477,20 +534,16 @@ def interactive_game(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(description="Simple one-qubit command line quantum game.")
-    parser.add_argument("--target", help="Desired final colour for direct mode: black, white, or gray.")
-    parser.add_argument("--gates", default="", help="Gate list, for example: 'X' or 'H / X'.")
-    parser.add_argument("--shots", type=int, default=200, help="Number of measurements to request.")
-    parser.add_argument("--quokka", default="quokka1", help="Quokka backend name, for example quokka1.")
+    parser = argparse.ArgumentParser(description="Colour mixer the quantum way.")
+    parser.add_argument("--start", default="black", help="Starting colour for custom mode: black, white, gray, or a ratio like 70/30.")
+    parser.add_argument("--target", help="Desired final colour for custom mode: black, white, gray, or a ratio like 70/30.")
+    parser.add_argument("--gates", default="", help="Gate list to apply to your starting colour, for example: 'X' or 'H / X'.")
+    parser.add_argument("--shots", type=int, default=500, help="Number of measurements to request.")
+    parser.add_argument("--quokka", default="quokka1", help="Quokka name, for example quokka1.")
     parser.add_argument(
         "--output",
         default=str(DEFAULT_OUTPUT_PATH),
         help="Where to write the generated QASM file.",
-    )
-    parser.add_argument(
-        "--no-local-fallback",
-        action="store_true",
-        help="Fail instead of locally sampling when Quokka is unavailable.",
     )
     return parser
 
@@ -507,18 +560,21 @@ def main():
         return
 
     try:
-        normalized_target = normalize_target_choice(args.target)
+        start_state, start_label = parse_colour_state(args.start)
+        target_state, target_label = parse_colour_state(args.target)
     except ValueError as exc:
         parser.error(str(exc))
 
     run_round(
-        mode_name="Direct Mode",
-        target_label=normalized_target,
+        mode_name="Custom Mode",
+        start_state=start_state,
+        start_label=start_label,
+        target_state=target_state,
+        target_label=target_label,
         gate_text=args.gates,
         shots=args.shots,
         quokka_name=args.quokka,
         qasm_path=Path(args.output),
-        allow_local_fallback=not args.no_local_fallback,
     )
 
 

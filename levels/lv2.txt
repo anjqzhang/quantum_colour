@@ -1,6 +1,6 @@
-# Level 2 configuration
+# Level 2 
 id: 2
-title: Level 2
+title: Level 2 - Flip
 description: Start from black and reach white in at most 3 gates.
 target: white
 max_gates: 3
