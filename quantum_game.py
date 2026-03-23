@@ -499,6 +499,38 @@ def prompt_next_action() -> str:
         print("Please enter r, m, or q.")
 
 
+def play_level(level: dict, args):
+    while True:
+        print()
+        print(level["title"])
+        print(level["description"])
+        print(f"Maximum gates: {level['max_gates']}")
+        print_gate_help(level["allowed_gates"])
+        print()
+
+        gate_text = prompt_gate_text(level["allowed_gates"], level["max_gates"])
+        run_round(
+            mode_name=level["title"],
+            start_state=INITIAL_STATE,
+            start_label="black",
+            target_state=level["target_state"],
+            target_label=level["target_label"],
+            gate_text=gate_text,
+            shots=args.shots,
+            quokka_name=args.quokka,
+            qasm_path=Path(args.output),
+            allowed_gates=level["allowed_gates"],
+            max_gates=level["max_gates"],
+        )
+        next_action = prompt_next_action()
+        if next_action == "replay":
+            continue
+        if next_action == "menu":
+            print()
+            return "menu"
+        return "quit"
+
+
 def interactive_game(args):
     print("Quantum Colour Mixer - Prototype")
     print("Choose a level and use quantum gates to reach the target colour.")
@@ -507,34 +539,13 @@ def interactive_game(args):
     while True:
         level_key = prompt_level()
         level = LEVELS[level_key]
-
-        while True:
-            print_level_intro(level_key)
-            gate_text = prompt_gate_text(level["allowed_gates"], level["max_gates"])
-            run_round(
-                mode_name=level["title"],
-                start_state=INITIAL_STATE,
-                start_label="black",
-                target_state=level["target_state"],
-                target_label=level["target_label"],
-                gate_text=gate_text,
-                shots=args.shots,
-                quokka_name=args.quokka,
-                qasm_path=Path(args.output),
-                allowed_gates=level["allowed_gates"],
-                max_gates=level["max_gates"],
-            )
-            next_action = prompt_next_action()
-            if next_action == "replay":
-                continue
-            if next_action == "menu":
-                print()
-                break
+        if play_level(level, args) == "quit":
             return
 
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Colour mixer the quantum way.")
+    parser.add_argument("--level", help="Start the game using a level file path, for example: levels/lv3.txt.")
     parser.add_argument("--start", default="black", help="Starting colour for custom mode: black, white, gray, or a ratio like 70/30.")
     parser.add_argument("--target", help="Desired final colour for custom mode: black, white, gray, or a ratio like 70/30.")
     parser.add_argument("--gates", default="", help="Gate list to apply to your starting colour, for example: 'X' or 'H / X'.")
@@ -554,6 +565,24 @@ def main():
 
     if args.shots <= 0:
         parser.error("--shots must be a positive integer.")
+
+    if args.level is not None:
+        if args.target is not None:
+            parser.error("--level cannot be used together with --target.")
+        if args.start != "black":
+            parser.error("--level uses the level's own starting colour, so do not pass --start.")
+        if args.gates:
+            parser.error("--level starts the interactive level flow, so do not pass --gates.")
+
+        try:
+            level = parse_level_file(Path(args.level))
+        except (OSError, ValueError) as exc:
+            parser.error(str(exc))
+
+        print("Quantum Colour Mixer - Prototype")
+        print("Loaded level from file.")
+        play_level(level, args)
+        return
 
     if args.target is None:
         interactive_game(args)

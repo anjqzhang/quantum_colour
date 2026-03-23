@@ -33,26 +33,36 @@ There's no target here. Default starting colour is black. Apply any magic availa
 Interactive levels:
 
 ```bash
-python3 quantum_game.py
+python quantum_game.py
 ```
 
 Custom mode single round:
 
 ```bash
-python3 quantum_game.py --start black --target white --gates "X" --shots 500
+python quantum_game.py --start black --target white --gates "X" --shots 500
 ```
 
 Custom mode with a superposition target:
 
 ```bash
-python3 quantum_game.py --start black --target 50/50 --gates "H" --shots 500
+python quantum_game.py --start black --target 50/50 --gates "H" --shots 500
 ```
 
 Custom mode with a custom black/white superposition:
 
 ```bash
-python3 quantum_game.py --start 70/30 --target 30/70 --gates "X" --shots 500
+python quantum_game.py --start 70/30 --target 30/70 --gates "X" --shots 500
 ```
+## Write your own level
+
+Each level is just a .txt file. You can create your own level by editing the existing levels file.
+
+Run the game from a file path to the level file:
+
+```bash
+python quantum_game.py --level levels/lv3.txt
+```
+
 
 ## Notes
 
