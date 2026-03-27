@@ -14,9 +14,9 @@ This prototype is a one-qubit model with two basis states, `|0>` representing bl
 
 When the game starts, it asks the player which mode to enter:
 
-- `Level 1`: start from black, target black, at most 3 gates, using `I` and `X`.
-- `Level 2`: start from black, target white, at most 3 gates, using `I` and `X`.
-- `Level 3`: start from black, target gray, at most 3 gates, using `I`, `X`, and `H`.
+- `Level 1`: start from black, target black, at most 3 gates, using `I`, `X`, and `Z`.
+- `Level 2`: start from black, target white, at most 3 gates, using `I`, `X`, and `Z`.
+- `Level 3`: start from black, target gray, at most 3 gates, using `I`, `X`, `Z`, and `H`.
 
 The levels are defined in [levels](./levels).
 
@@ -66,6 +66,8 @@ python quantum_game.py --level levels/lv3.txt
 
 ## Notes
 
-- Supported gates: `I`, `X`, `Y`, `Z`, `H`, `T`. (More gates coming in full version)
+- Supported gates: `I` as a game-level no-op, plus Quokka-backed `X`, `Y`, `Z`, `H`, `RX`, `RY`, `RZ`.
 - Custom mode accepts `black`, `white`, `gray`, or a ratio like `70/30` for both `--start` and `--target`.
+- Rotation gates use syntax like `RX(pi/2)`, `RY(pi/3)`, or `RZ(-pi/4)`.
+- `RX(theta)` is compiled to `H RZ(theta) H` before sending QASM to Quokka, because the live Quokka backend accepts `RZ` and `H` but currently rejects direct `RX`.
 - Quokka access is required for measurements.

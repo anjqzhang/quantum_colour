@@ -4,6 +4,6 @@ title: Level 1 - Identity
 description: Start from black and reach black in at most 3 gates.
 target: black
 max_gates: 3
-allowed_gates: I, X
+allowed_gates: I, X, Z
 order: 1
 aliases: 1, lv1, level1

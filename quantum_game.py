@@ -22,13 +22,29 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-GATES = {
+FIXED_GATES = {
     "I": np.array([[1, 0], [0, 1]], dtype=complex),
     "X": np.array([[0, 1], [1, 0]], dtype=complex),
     "Y": np.array([[0, -1j], [1j, 0]], dtype=complex),
     "Z": np.array([[1, 0], [0, -1]], dtype=complex),
     "H": (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=complex),
-    "T": np.array([[1, 0], [0, np.exp(1j * np.pi / 4)]], dtype=complex),
+}
+ROTATION_GATES = {"RX", "RY", "RZ"}
+SUPPORTED_GATES = set(FIXED_GATES) | ROTATION_GATES
+GATE_ALIASES = {
+    "I": "I",
+    "X": "X",
+    "Z": "Z",
+    "Y": "Y",
+    "XZ": "Y",
+    "H": "H",
+    "HADAMARD": "H",
+    "RX": "RX",
+    "XROT": "RX",
+    "RY": "RY",
+    "YROT": "RY",
+    "RZ": "RZ",
+    "ZROT": "RZ",
 }
 
 INITIAL_STATE = np.array([1, 0], dtype=complex)
@@ -60,22 +76,96 @@ BIT_COLORS = {
 DEFAULT_OUTPUT_PATH = SCRIPT_DIR / "generated" / "player_circuit.qasm"
 LEVELS_DIR = SCRIPT_DIR / "levels"
 GATE_DESCRIPTIONS = {
-    "I": "Identity: leave the current colour as it is.",
+    "I": "Identity: a no-op in the game. It leaves the colour unchanged.",
     "X": "Flip: swap black and white.",
+    "Y": "Pauli Y: bit flip plus phase flip.",
+    "Z": "Pauli Z: phase flip.",
     "H": "Hadamard: turn black into an even black/white mix that we call gray.",
-    "Y": "Flip with an extra phase twist.",
-    "Z": "Phase flip: changes the hidden phase of white.",
-    "T": "Eighth-phase gate.",
+    "RX": "Rotation around the X-axis. Example: RX(pi/2)",
+    "RY": "Rotation around the Y-axis. Example: RY(pi/2)",
+    "RZ": "Rotation around the Z-axis. Example: RZ(pi/2)",
 }
 
 
 def parse_gate_input(raw_text: str):
-    pgates = [gate.strip().upper() for gate in re.split(r"[\s,\/]+", raw_text) if gate.strip()]
-    invalid = [pgate for pgate in pgates if pgate not in GATES]
-    if invalid:
-        supported = ", ".join(sorted(GATES))
-        raise ValueError(f"Unsupported gate(s): {', '.join(invalid)}. Supported gates: {supported}.")
-    return pgates
+    tokens = tokenize_gate_text(raw_text)
+    return [parse_gate_token(token) for token in tokens]
+
+
+def tokenize_gate_text(raw_text: str) -> List[str]:
+    tokens = []
+    current = []
+    depth = 0
+
+    for char in raw_text:
+        if char == "(":
+            depth += 1
+            current.append(char)
+            continue
+        if char == ")":
+            depth = max(0, depth - 1)
+            current.append(char)
+            continue
+
+        if depth == 0 and (char.isspace() or char in {",", "/"}):
+            token = "".join(current).strip()
+            if token:
+                tokens.append(token)
+            current = []
+            continue
+
+        current.append(char)
+
+    token = "".join(current).strip()
+    if token:
+        tokens.append(token)
+    return tokens
+
+
+def canonical_gate_name(raw_name: str) -> str:
+    normalized = raw_name.strip().upper()
+    if normalized not in GATE_ALIASES:
+        supported = ", ".join(sorted(SUPPORTED_GATES))
+        raise ValueError(f"Unsupported gate: {raw_name}. Supported gates: {supported}.")
+    return GATE_ALIASES[normalized]
+
+
+def parse_angle_expression(raw_text: str) -> float:
+    expression = raw_text.strip()
+    if not re.fullmatch(r"[0-9piPI+\-*/().\s]+", expression):
+        raise ValueError(f"Unsupported rotation angle: {raw_text}")
+    normalized = expression.replace("PI", "pi").replace("Pi", "pi").replace("pI", "pi")
+    try:
+        value = eval(normalized, {"__builtins__": {}}, {"pi": np.pi})
+    except Exception as exc:
+        raise ValueError(f"Could not parse rotation angle: {raw_text}") from exc
+    angle = float(value)
+    if not np.isfinite(angle):
+        raise ValueError(f"Rotation angle must be finite: {raw_text}")
+    return angle
+
+
+def parse_gate_token(token: str) -> dict:
+    rotation_match = re.fullmatch(r"([A-Za-z]+)\(([^()]+)\)", token.strip())
+    if rotation_match:
+        family = canonical_gate_name(rotation_match.group(1))
+        if family not in ROTATION_GATES:
+            raise ValueError(f"{family} does not take an angle.")
+        angle_text = rotation_match.group(2).strip()
+        return {
+            "family": family,
+            "angle": parse_angle_expression(angle_text),
+            "label": f"{family}({angle_text})",
+        }
+
+    family = canonical_gate_name(token)
+    if family in ROTATION_GATES:
+        raise ValueError(f"{family} needs an angle, for example {family}(pi/2).")
+    return {
+        "family": family,
+        "angle": None,
+        "label": family,
+    }
 
 def format_ratio_label(black_weight: float, white_weight: float) -> str:
     black_pct = black_weight * 100
@@ -142,10 +232,10 @@ def parse_level_file(level_path: Path) -> dict:
     if missing:
         raise ValueError(f"Missing fields in {level_path.name}: {', '.join(missing)}")
 
-    allowed_gates = [gate.strip().upper() for gate in config["allowed_gates"].split(",") if gate.strip()]
-    invalid_gates = [gate for gate in allowed_gates if gate not in GATES]
-    if invalid_gates:
-        raise ValueError(f"Unsupported gates in {level_path.name}: {', '.join(invalid_gates)}")
+    try:
+        allowed_gates = [canonical_gate_name(gate) for gate in config["allowed_gates"].split(",") if gate.strip()]
+    except ValueError as exc:
+        raise ValueError(f"{level_path.name}: {exc}") from exc
 
     target_value = config["target"].strip()
     if target_value.lower() == "none":
@@ -196,25 +286,79 @@ def load_levels():
 LEVELS, LEVEL_ALIASES, LEVEL_ORDER = load_levels()
 
 
-def validate_gate_sequence(gates: List[str], allowed_gates: List[str] | None = None, max_gates: int | None = None):
+def validate_gate_sequence(gates: List[dict], allowed_gates: List[str] | None = None, max_gates: int | None = None):
     if max_gates is not None and len(gates) > max_gates:
         raise ValueError(f"You can use at most {max_gates} gates in this mode.")
 
     if allowed_gates is not None:
-        disallowed = [gate for gate in gates if gate not in allowed_gates]
+        disallowed = [gate["family"] for gate in gates if gate["family"] not in allowed_gates]
         if disallowed:
             allowed_text = ", ".join(allowed_gates)
             raise ValueError(f"This mode only allows these gates: {allowed_text}.")
 
 
-def apply_gates(gates: Iterable[str], start_state: np.ndarray | None = None) -> np.ndarray:
+def gate_matrix(gate: dict) -> np.ndarray:
+    family = gate["family"]
+    if family in FIXED_GATES:
+        return FIXED_GATES[family]
+
+    theta = gate["angle"]
+    half_theta = theta / 2
+    if family == "RX":
+        return np.array(
+            [
+                [np.cos(half_theta), -1j * np.sin(half_theta)],
+                [-1j * np.sin(half_theta), np.cos(half_theta)],
+            ],
+            dtype=complex,
+        )
+    if family == "RY":
+        return np.array(
+            [
+                [np.cos(half_theta), -np.sin(half_theta)],
+                [np.sin(half_theta), np.cos(half_theta)],
+            ],
+            dtype=complex,
+        )
+    if family == "RZ":
+        return np.array(
+            [
+                [np.exp(-1j * half_theta), 0],
+                [0, np.exp(1j * half_theta)],
+            ],
+            dtype=complex,
+        )
+    raise ValueError(f"Unsupported gate family: {family}")
+
+
+def gate_display(gate: dict) -> str:
+    return gate["label"]
+
+
+def format_qasm_angle(angle: float) -> str:
+    return f"{angle:.12f}".rstrip("0").rstrip(".")
+
+
+def gate_qasm(gate: dict) -> str:
+    family = gate["family"]
+    if family == "I":
+        return ""
+    if family == "RX":
+        angle_text = format_qasm_angle(gate["angle"])
+        return f"h q[0];\nrz({angle_text}) q[0];\nh q[0];"
+    if family in ROTATION_GATES:
+        return f"{family.lower()}({format_qasm_angle(gate['angle'])}) q[0];"
+    return f"{family.lower()} q[0];"
+
+
+def apply_gates(gates: Iterable[dict], start_state: np.ndarray | None = None) -> np.ndarray:
     state = np.array(start_state if start_state is not None else INITIAL_STATE, dtype=complex)
-    for gate_name in gates:
-        state = GATES[gate_name] @ state
+    for gate in gates:
+        state = gate_matrix(gate) @ state
     return state
 
 
-def build_qasm(gates: Iterable[str], start_state: np.ndarray | None = None) -> str:
+def build_qasm(gates: Iterable[dict], start_state: np.ndarray | None = None) -> str:
     lines = [
         "OPENQASM 2.0;",
         "qreg q[1];",
@@ -224,10 +368,10 @@ def build_qasm(gates: Iterable[str], start_state: np.ndarray | None = None) -> s
     if not np.allclose(initial_state, INITIAL_STATE):
         theta = 2 * np.arctan2(np.abs(initial_state[1]), np.abs(initial_state[0]))
         lines.append(f"ry({theta:.12f}) q[0];")
-    for gate_name in gates:
-        if gate_name == "I":
-            continue
-        lines.append(f"{gate_name.lower()} q[0];")
+    for gate in gates:
+        qasm_line = gate_qasm(gate)
+        if qasm_line:
+            lines.append(qasm_line)
     lines.append("measure q[0] -> c[0];")
     return "\n".join(lines) + "\n"
 
@@ -374,7 +518,7 @@ def print_round_report(
     start_label: str,
     target_label: str | None,
     target_state: np.ndarray | None,
-    gates: List[str],
+    gates: List[dict],
     state: np.ndarray,
     measurements: List[int],
     qasm_path: Path,
@@ -392,7 +536,7 @@ def print_round_report(
         print("Target colour: none in playground mode")
     else:
         print(f"Target colour: {target_label}")
-    print(f"Gates used: {' '.join(gates) if gates else '(none)'}")
+    print(f"Gates used: {' '.join(gate_display(gate) for gate in gates) if gates else '(none)'}")
     print(f"QASM file: {qasm_path}")
     print(f"Measurement plot: {plot_path}")
     print()
@@ -405,6 +549,31 @@ def print_round_report(
         print("Playground mode: no target check for this round.")
     else:
         print("YAY: you reached the target colour." if success else "NAY: you did not reach the target colour.")
+    print()
+
+
+def print_round_error(
+    mode_name: str,
+    start_label: str,
+    target_label: str | None,
+    gates: List[dict],
+    qasm_path: Path,
+    error_message: str,
+):
+    print()
+    print("Round error")
+    print(f"Mode: {mode_name}")
+    print(f"Starting colour: {start_label}")
+    if target_label is None:
+        print("Target colour: none in playground mode")
+    else:
+        print(f"Target colour: {target_label}")
+    print(f"Gates used: {' '.join(gate_display(gate) for gate in gates) if gates else '(none)'}")
+    print(f"QASM file: {qasm_path}")
+    print()
+    print("Quokka error:")
+    print(error_message)
+    print("No measurements were returned for this round.")
     print()
 
 
@@ -426,7 +595,11 @@ def run_round(
     state = apply_gates(gates, start_state=start_state)
     program = build_qasm(gates, start_state=start_state)
     write_qasm(program, qasm_path)
-    measurements= collect_measurements(program, shots, quokka_name)
+    try:
+        measurements = collect_measurements(program, shots, quokka_name)
+    except RuntimeError as exc:
+        print_round_error(mode_name, start_label, target_label, gates, qasm_path, str(exc))
+        return False
     plot_path = plot_measurements(measurements, default_plot_path(qasm_path))
     print_round_report(
         mode_name,
@@ -439,6 +612,7 @@ def run_round(
         qasm_path,
         plot_path
     )
+    return True
 
 
 def print_gate_help(allowed_gates: List[str]):
@@ -475,7 +649,7 @@ def prompt_gate_text(allowed_gates: List[str], max_gates: int) -> str:
     while True:
         gate_text = input(
             f"Enter up to {max_gates} gates from {', '.join(allowed_gates)} "
-            "(examples: X or H / X). Press Enter for no gate: "
+            "(examples: X or RX(pi/2) / Z). Press Enter for no gate: "
         ).strip()
         try:
             gates = parse_gate_input(gate_text)
