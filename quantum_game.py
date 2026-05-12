@@ -83,9 +83,6 @@ TARGET_ALIASES = {
     "yellow": "10",
     "y": "10",
     "black": "11",
-    "cmyk black": "11",
-    "cmyk-black": "11",
-    "key": "11",
     "k": "11",
 }
 CMYK_COLOUR_ALIASES = {
@@ -96,10 +93,7 @@ CMYK_COLOUR_ALIASES = {
     "yellow": "10",
     "y": "10",
     "black": "11",
-    "key": "11",
     "k": "11",
-    "cmyk black": "11",
-    "cmyk-black": "11",
 }
 BIT_COLORS = {
     0: "#000000",
