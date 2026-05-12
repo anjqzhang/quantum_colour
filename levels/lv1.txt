@@ -1,9 +1,10 @@
-# Level 1 : Identity
+# Level 1 : CMYK cyan-magenta mix
 id: 1
-title: Level 1 - Identity
-description: Start from black and reach black in at most 3 gates.
-target: black
-max_gates: 3
-allowed_gates: I, X, Z
+title: Level 1 - Vibrant Purple
+description: Start from cyan |00> and create an equal cyan/magenta mix. Hint: apply a Hadamard to qubit 1.
+start: cyan
+target: 50 cyan / 50 magenta
+max_gates: 1
+allowed_gates: H
 order: 1
-aliases: 1, lv1, level1
+aliases: 1, lv1, level1, purple

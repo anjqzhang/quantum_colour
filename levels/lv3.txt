@@ -1,9 +1,0 @@
-# Level 3 
-id: 3
-title: Level 3 - Superposition
-description: Start from black and reach gray, the 50-50 black/white superposition.
-target: 50/50
-max_gates: 3
-allowed_gates: I, X, Z, H
-order: 3
-aliases: 3, lv3, level3
