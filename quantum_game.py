@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Iterable, List
 
 import numpy as np
@@ -20,7 +19,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 
 FIXED_GATES = {
     "I": np.array([[1, 0], [0, 1]], dtype=complex),
@@ -222,7 +220,9 @@ def parse_qubit_index(raw_text: str) -> int:
         raise ValueError(f"Invalid qubit index: {raw_text}")
     qubit = int(raw_value)
     if qubit < 0 or qubit >= MAX_QUBITS:
-        raise ValueError(f"Qubit index must be 0 or 1 for this two-qubit prototype: {raw_text}")
+        raise ValueError(
+            f"Qubit index must be 0 or 1 for this two-qubit prototype: {raw_text}"
+        )
     return qubit
 
 
@@ -252,11 +252,15 @@ def parse_gate_token(token: str) -> dict:
                 qubits = [0]
             elif len(args) == 2:
                 if not is_qubit_index_text(args[0]):
-                    raise ValueError(f"{family} two-argument form must be {family}(qubit, angle), for example {family}(1, pi/2).")
+                    raise ValueError(
+                        f"{family} two-argument form must be {family}(qubit, angle), for example {family}(1, pi/2)."
+                    )
                 qubits = [parse_qubit_index(args[0])]
                 angle_text = args[1]
             else:
-                raise ValueError(f"{family} needs an angle, optionally with one qubit index.")
+                raise ValueError(
+                    f"{family} needs an angle, optionally with one qubit index."
+                )
             angle = parse_angle_expression(angle_text)
             return {
                 "family": family,
@@ -267,7 +271,9 @@ def parse_gate_token(token: str) -> dict:
 
         if family in TWO_QUBIT_GATES:
             if len(args) != 2:
-                raise ValueError(f"{family} needs two qubit indexes, for example {family}(0,1).")
+                raise ValueError(
+                    f"{family} needs two qubit indexes, for example {family}(0,1)."
+                )
             qubits = [parse_qubit_index(args[0]), parse_qubit_index(args[1])]
             if qubits[0] == qubits[1]:
                 raise ValueError(f"{family} needs two different qubits.")
@@ -279,7 +285,9 @@ def parse_gate_token(token: str) -> dict:
             }
 
         if len(args) != 1:
-            raise ValueError(f"{family} needs one qubit index, for example {family}(1).")
+            raise ValueError(
+                f"{family} needs one qubit index, for example {family}(1)."
+            )
         qubits = [parse_qubit_index(args[0])]
         return {
             "family": family,
@@ -298,6 +306,7 @@ def parse_gate_token(token: str) -> dict:
         "qubits": qubits,
         "label": gate_label(family, [], qubits),
     }
+
 
 def format_probability(value: float) -> str:
     percent = value * 100
@@ -343,7 +352,9 @@ def parse_cmyk_mix_component(raw_component: str) -> tuple[str, float] | None:
 def parse_cmyk_mix(raw_text: str) -> tuple[np.ndarray, str] | None:
     components = [
         component.strip()
-        for component in re.split(r"\s*(?:/|,|\band\b)\s*", raw_text.strip(), flags=re.IGNORECASE)
+        for component in re.split(
+            r"\s*(?:/|,|\band\b)\s*", raw_text.strip(), flags=re.IGNORECASE
+        )
         if component.strip()
     ]
     if len(components) < 2:
@@ -383,7 +394,9 @@ def parse_colour_basis_state(raw_text: str) -> tuple[np.ndarray, str]:
     if normalized in TARGET_ALIASES:
         canonical = TARGET_ALIASES[normalized]
         return TARGET_STATES[canonical], STATE_NAMES[canonical]
-    raise ValueError("Please choose cyan, magenta, yellow, black, or a basis state: 00, 01, 10, or 11.")
+    raise ValueError(
+        "Please choose cyan, magenta, yellow, black, or a basis state: 00, 01, 10, or 11."
+    )
 
 
 def parse_colour_state(raw_text: str) -> tuple[np.ndarray, str]:
@@ -397,7 +410,9 @@ def parse_colour_state(raw_text: str) -> tuple[np.ndarray, str]:
     if cmyk_mix is not None:
         return cmyk_mix
 
-    raise ValueError("Please choose CMYK colours, basis states like 01, or a mix like '50 cyan / 50 magenta'.")
+    raise ValueError(
+        "Please choose CMYK colours, basis states like 01, or a mix like '50 cyan / 50 magenta'."
+    )
 
 
 def normalize_level_choice(raw_text: str) -> str:
@@ -418,13 +433,26 @@ def parse_level_file(level_path: Path) -> dict:
         key, value = line.split(":", 1)
         config[key.strip().lower()] = value.strip()
 
-    required_fields = {"id", "title", "description", "max_gates", "allowed_gates", "order", "aliases", "target"}
+    required_fields = {
+        "id",
+        "title",
+        "description",
+        "max_gates",
+        "allowed_gates",
+        "order",
+        "aliases",
+        "target",
+    }
     missing = sorted(required_fields - config.keys())
     if missing:
         raise ValueError(f"Missing fields in {level_path.name}: {', '.join(missing)}")
 
     try:
-        allowed_gates = [canonical_gate_name(gate) for gate in config["allowed_gates"].split(",") if gate.strip()]
+        allowed_gates = [
+            canonical_gate_name(gate)
+            for gate in config["allowed_gates"].split(",")
+            if gate.strip()
+        ]
     except ValueError as exc:
         raise ValueError(f"{level_path.name}: {exc}") from exc
 
@@ -437,7 +465,9 @@ def parse_level_file(level_path: Path) -> dict:
 
     start_state, start_label = parse_colour_basis_state(config.get("start", "black"))
 
-    aliases = [alias.strip().lower() for alias in config["aliases"].split(",") if alias.strip()]
+    aliases = [
+        alias.strip().lower() for alias in config["aliases"].split(",") if alias.strip()
+    ]
     if not aliases:
         raise ValueError(f"No aliases provided in {level_path.name}")
 
@@ -481,12 +511,18 @@ def load_levels():
 LEVELS, LEVEL_ALIASES, LEVEL_ORDER = load_levels()
 
 
-def validate_gate_sequence(gates: List[dict], allowed_gates: List[str] | None = None, max_gates: int | None = None):
+def validate_gate_sequence(
+    gates: List[dict],
+    allowed_gates: List[str] | None = None,
+    max_gates: int | None = None,
+):
     if max_gates is not None and len(gates) > max_gates:
         raise ValueError(f"You can use at most {max_gates} gates in this mode.")
 
     if allowed_gates is not None:
-        disallowed = [gate["family"] for gate in gates if gate["family"] not in allowed_gates]
+        disallowed = [
+            gate["family"] for gate in gates if gate["family"] not in allowed_gates
+        ]
         if disallowed:
             allowed_text = ", ".join(allowed_gates)
             raise ValueError(f"This mode only allows these gates: {allowed_text}.")
@@ -536,8 +572,12 @@ def qubit_count_for_state(state: np.ndarray) -> int:
     return qubit_count
 
 
-def infer_qubit_count(gates: Iterable[dict], start_state: np.ndarray | None = None) -> int:
-    state = np.array(start_state if start_state is not None else INITIAL_STATE, dtype=complex)
+def infer_qubit_count(
+    gates: Iterable[dict], start_state: np.ndarray | None = None
+) -> int:
+    state = np.array(
+        start_state if start_state is not None else INITIAL_STATE, dtype=complex
+    )
     qubit_count = qubit_count_for_state(state)
     for gate in gates:
         qubit_count = max(qubit_count, max(gate["qubits"]) + 1)
@@ -555,7 +595,9 @@ def expand_state(state: np.ndarray, qubit_count: int) -> np.ndarray:
     return expanded
 
 
-def apply_single_qubit_gate(state: np.ndarray, matrix: np.ndarray, target: int, qubit_count: int) -> np.ndarray:
+def apply_single_qubit_gate(
+    state: np.ndarray, matrix: np.ndarray, target: int, qubit_count: int
+) -> np.ndarray:
     tensor = state.reshape([2] * qubit_count)
     tensor = np.moveaxis(tensor, target, 0)
     updated = np.tensordot(matrix, tensor, axes=([1], [0]))
@@ -567,7 +609,9 @@ def qubit_bit_mask(qubit: int, qubit_count: int) -> int:
     return 1 << (qubit_count - qubit - 1)
 
 
-def apply_cnot_gate(state: np.ndarray, control: int, target: int, qubit_count: int) -> np.ndarray:
+def apply_cnot_gate(
+    state: np.ndarray, control: int, target: int, qubit_count: int
+) -> np.ndarray:
     output = np.zeros_like(state)
     control_mask = qubit_bit_mask(control, qubit_count)
     target_mask = qubit_bit_mask(target, qubit_count)
@@ -576,19 +620,25 @@ def apply_cnot_gate(state: np.ndarray, control: int, target: int, qubit_count: i
     return output
 
 
-def apply_swap_gate(state: np.ndarray, first: int, second: int, qubit_count: int) -> np.ndarray:
+def apply_swap_gate(
+    state: np.ndarray, first: int, second: int, qubit_count: int
+) -> np.ndarray:
     output = np.zeros_like(state)
     first_mask = qubit_bit_mask(first, qubit_count)
     second_mask = qubit_bit_mask(second, qubit_count)
     for index, amplitude in enumerate(state):
         first_bit = bool(index & first_mask)
         second_bit = bool(index & second_mask)
-        target_index = index ^ first_mask ^ second_mask if first_bit != second_bit else index
+        target_index = (
+            index ^ first_mask ^ second_mask if first_bit != second_bit else index
+        )
         output[target_index] += amplitude
     return output
 
 
-def apply_cphase_gate(state: np.ndarray, control: int, target: int, qubit_count: int) -> np.ndarray:
+def apply_cphase_gate(
+    state: np.ndarray, control: int, target: int, qubit_count: int
+) -> np.ndarray:
     output = np.array(state, dtype=complex)
     control_mask = qubit_bit_mask(control, qubit_count)
     target_mask = qubit_bit_mask(target, qubit_count)
@@ -651,7 +701,9 @@ def basis_state_index(state: np.ndarray) -> int | None:
 def qasm_prepare_basis_state(state: np.ndarray, qubit_count: int) -> List[str]:
     index = basis_state_index(state)
     if index is None:
-        raise ValueError("QASM preparation currently supports computational-basis starting colours only.")
+        raise ValueError(
+            "QASM preparation currently supports computational-basis starting colours only."
+        )
 
     lines = []
     for qubit in range(qubit_count):
@@ -660,10 +712,17 @@ def qasm_prepare_basis_state(state: np.ndarray, qubit_count: int) -> List[str]:
     return lines
 
 
-def apply_gates(gates: Iterable[dict], start_state: np.ndarray | None = None) -> np.ndarray:
+def apply_gates(
+    gates: Iterable[dict], start_state: np.ndarray | None = None
+) -> np.ndarray:
     gates = list(gates)
     qubit_count = infer_qubit_count(gates, start_state=start_state)
-    state = expand_state(np.array(start_state if start_state is not None else INITIAL_STATE, dtype=complex), qubit_count)
+    state = expand_state(
+        np.array(
+            start_state if start_state is not None else INITIAL_STATE, dtype=complex
+        ),
+        qubit_count,
+    )
     for gate in gates:
         family = gate["family"]
         qubits = gate["qubits"]
@@ -674,7 +733,9 @@ def apply_gates(gates: Iterable[dict], start_state: np.ndarray | None = None) ->
         elif family == "CPHASE":
             state = apply_cphase_gate(state, qubits[0], qubits[1], qubit_count)
         else:
-            state = apply_single_qubit_gate(state, gate_matrix(gate), qubits[0], qubit_count)
+            state = apply_single_qubit_gate(
+                state, gate_matrix(gate), qubits[0], qubit_count
+            )
     return state
 
 
@@ -686,7 +747,9 @@ def build_qasm(gates: Iterable[dict], start_state: np.ndarray | None = None) -> 
         f"qreg q[{qubit_count}];",
         f"creg c[{qubit_count}];",
     ]
-    initial_state = np.array(start_state if start_state is not None else INITIAL_STATE, dtype=complex)
+    initial_state = np.array(
+        start_state if start_state is not None else INITIAL_STATE, dtype=complex
+    )
     initial_qubit_count = qubit_count_for_state(initial_state)
     if initial_qubit_count == 1:
         theta = 2 * np.arctan2(np.abs(initial_state[1]), np.abs(initial_state[0]))
@@ -709,11 +772,13 @@ def write_qasm(program: str, output_path: Path) -> Path:
     return output_path
 
 
-def states_match_up_to_global_phase(actual: np.ndarray, desired: np.ndarray, tolerance: float = 1e-9) -> bool:
+def states_match_up_to_global_phase(
+    actual: np.ndarray, desired: np.ndarray, tolerance: float = 1e-9
+) -> bool:
     if actual.shape != desired.shape:
         return False
     overlap = np.vdot(desired, actual)
-    return np.isclose(abs(overlap), 1.0, atol=tolerance)
+    return bool(np.isclose(abs(overlap), 1.0, atol=tolerance))
 
 
 def int_to_measurement(value: int, qubit_count: int):
@@ -721,7 +786,9 @@ def int_to_measurement(value: int, qubit_count: int):
         raise ValueError(f"Unexpected measurement value: {value}")
     if qubit_count == 1:
         return value
-    return tuple((value >> (qubit_count - qubit - 1)) & 1 for qubit in range(qubit_count))
+    return tuple(
+        (value >> (qubit_count - qubit - 1)) & 1 for qubit in range(qubit_count)
+    )
 
 
 def normalize_measurement_value(raw_value, qubit_count: int):
@@ -735,7 +802,9 @@ def normalize_measurement_value(raw_value, qubit_count: int):
 
 def normalize_measurements(raw_measurements, qubit_count: int):
     if not isinstance(raw_measurements, list):
-        raise ValueError(f"Unexpected Quokka result type: {type(raw_measurements).__name__}")
+        raise ValueError(
+            f"Unexpected Quokka result type: {type(raw_measurements).__name__}"
+        )
 
     shots = []
     for measurement in raw_measurements:
@@ -746,19 +815,27 @@ def normalize_measurements(raw_measurements, qubit_count: int):
 
 def extract_quokka_measurements(response_payload, qubit_count: int):
 
-    if isinstance(response_payload.get("result"), dict) and "c" in response_payload["result"]:
+    if (
+        isinstance(response_payload.get("result"), dict)
+        and "c" in response_payload["result"]
+    ):
         return normalize_measurements(response_payload["result"]["c"], qubit_count)
 
     if "c" in response_payload:
         return normalize_measurements(response_payload["c"], qubit_count)
 
-    if isinstance(response_payload.get("data"), dict) and "c" in response_payload["data"]:
+    if (
+        isinstance(response_payload.get("data"), dict)
+        and "c" in response_payload["data"]
+    ):
         return normalize_measurements(response_payload["data"]["c"], qubit_count)
 
     raise ValueError(f"Unexpected Quokka response payload: {response_payload}")
 
 
-def send_to_quokka(program: str, count: int, my_quokka: str = "quokka1", qubit_count: int = 1):
+def send_to_quokka(
+    program: str, count: int, my_quokka: str = "quokka1", qubit_count: int = 1
+):
     request_http = f"http://{my_quokka}.quokkacomputing.com/qsim/qasm"
     data = {
         "script": program,
@@ -770,9 +847,12 @@ def send_to_quokka(program: str, count: int, my_quokka: str = "quokka1", qubit_c
     obj = extract_quokka_measurements(json_obj, qubit_count)
     return obj
 
+
 def collect_measurements(program: str, shots: int, quokka_name: str, qubit_count: int):
     try:
-        return send_to_quokka(program, count=shots, my_quokka=quokka_name, qubit_count=qubit_count)
+        return send_to_quokka(
+            program, count=shots, my_quokka=quokka_name, qubit_count=qubit_count
+        )
     except Exception as exc:
         raise RuntimeError(f"Quokka request failed: {exc}") from exc
 
@@ -826,7 +906,9 @@ def plot_measurements(measurements: Iterable, plot_path: Path) -> Path:
 
     labels = sorted(measurement_counts(measurements))
     for label in labels:
-        mask = np.array([measurement_label(measurement) == label for measurement in measurements])
+        mask = np.array(
+            [measurement_label(measurement) == label for measurement in measurements]
+        )
         ax.scatter(
             xs[mask],
             ys[mask],
@@ -870,7 +952,9 @@ def build_dot_strip(measurements: Iterable, max_dots: int = 60) -> str:
         "10": "o",
         "11": "@",
     }
-    return "".join(symbols.get(measurement_label(measurement), "?") for measurement in sample)
+    return "".join(
+        symbols.get(measurement_label(measurement), "?") for measurement in sample
+    )
 
 
 def print_round_report(
@@ -884,9 +968,11 @@ def print_round_report(
     qasm_path: Path,
     plot_path: Path,
 ):
-    counts = measurement_counts(measurements)
-    total = len(measurements)
-    success = None if target_state is None else states_match_up_to_global_phase(state, target_state)
+    success = (
+        None
+        if target_state is None
+        else states_match_up_to_global_phase(state, target_state)
+    )
 
     print()
     print("Round result")
@@ -896,22 +982,26 @@ def print_round_report(
         print("Target colour: none in playground mode")
     else:
         print(f"Target colour: {target_label}")
-    print(f"Gates used: {' '.join(gate_display(gate) for gate in gates) if gates else '(none)'}")
+    print(
+        f"Gates used: {' '.join(gate_display(gate) for gate in gates) if gates else '(none)'}"
+    )
     print(f"QASM file: {qasm_path}")
     print(f"Measurement plot: {plot_path}")
     print()
-    # print(f"Black: {counts['0']:>4}/{total} = {counts['0'] / total:6.1%}")
-    # print(f"White: {counts['1']:>4}/{total} = {counts['1'] / total:6.1%}")
     if any(isinstance(measurement, tuple) for measurement in measurements):
-        print("Colour strip (. = cyan |00>, : = magenta |01>, o = yellow |10>, @ = black |11>):")
-    else:
-        print("Colour strip (. = black, o = white):")
+        print(
+            "Colour strip (. = cyan |00>, : = magenta |01>, o = yellow |10>, @ = black |11>):"
+        )
     print(build_dot_strip(measurements))
     print()
     if success is None:
         print("Playground mode: no target check for this round.")
     else:
-        print("YAY: you reached the target colour." if success else "NAY: you did not reach the target colour.")
+        print(
+            "YAY: you reached the target colour."
+            if success
+            else "NAY: you did not reach the target colour."
+        )
     print()
 
 
@@ -931,7 +1021,9 @@ def print_round_error(
         print("Target colour: none in playground mode")
     else:
         print(f"Target colour: {target_label}")
-    print(f"Gates used: {' '.join(gate_display(gate) for gate in gates) if gates else '(none)'}")
+    print(
+        f"Gates used: {' '.join(gate_display(gate) for gate in gates) if gates else '(none)'}"
+    )
     print(f"QASM file: {qasm_path}")
     print()
     print("Quokka error:")
@@ -962,7 +1054,9 @@ def run_round(
     try:
         measurements = collect_measurements(program, shots, quokka_name, qubit_count)
     except RuntimeError as exc:
-        print_round_error(mode_name, start_label, target_label, gates, qasm_path, str(exc))
+        print_round_error(
+            mode_name, start_label, target_label, gates, qasm_path, str(exc)
+        )
         return False
     plot_path = plot_measurements(measurements, default_plot_path(qasm_path))
     print_round_report(
@@ -974,7 +1068,7 @@ def run_round(
         state,
         measurements,
         qasm_path,
-        plot_path
+        plot_path,
     )
     return True
 
@@ -1011,14 +1105,17 @@ def prompt_level() -> str:
 
 
 def prompt_gate_text(allowed_gates: List[str], max_gates: int) -> str:
+    gate_word = "gate" if max_gates == 1 else "gates"
     while True:
         gate_text = input(
-            f"Enter up to {max_gates} gates from {', '.join(allowed_gates)} "
-            "(examples: X, H(1), or RX(0, pi/2) / CNOT(0,1)). Press Enter for no gate: "
+            f"Enter up to {max_gates} {gate_word} from allowed gates "
+            f"({', '.join(allowed_gates)}). Press Enter for no gate: "
         ).strip()
         try:
             gates = parse_gate_input(gate_text)
-            validate_gate_sequence(gates, allowed_gates=allowed_gates, max_gates=max_gates)
+            validate_gate_sequence(
+                gates, allowed_gates=allowed_gates, max_gates=max_gates
+            )
             return gate_text
         except ValueError as exc:
             print(exc)
@@ -1026,7 +1123,11 @@ def prompt_gate_text(allowed_gates: List[str], max_gates: int) -> str:
 
 def prompt_next_action() -> str:
     while True:
-        answer = input("Choose next action: replay level (r), level menu (m), or quit (q): ").strip().lower()
+        answer = (
+            input("Choose next action: replay level (r), level menu (m), or quit (q): ")
+            .strip()
+            .lower()
+        )
         if answer in {"r", "replay"}:
             return "replay"
         if answer in {"m", "menu"}:
@@ -1083,12 +1184,30 @@ def interactive_game(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Colour mixer the quantum way.")
-    parser.add_argument("--level", help="Start the game using a level file path, for example: levels/lv1.txt.")
-    parser.add_argument("--start", default="black", help="Starting colour for custom mode: cyan, magenta, yellow, black, or 00/01/10/11.")
-    parser.add_argument("--target", help="Desired final colour or mix for custom mode, for example: magenta, 01, or '50 cyan / 50 magenta'.")
-    parser.add_argument("--gates", default="", help="Gate list to apply to your starting colour, for example: 'H(1)' or 'X(0) / X(1)'.")
-    parser.add_argument("--shots", type=int, default=500, help="Number of measurements to request.")
-    parser.add_argument("--quokka", default="quokka1", help="Quokka name, for example quokka1.")
+    parser.add_argument(
+        "--level",
+        help="Start the game using a level file path, for example: levels/lv1.txt.",
+    )
+    parser.add_argument(
+        "--start",
+        default="black",
+        help="Starting colour for custom mode: cyan, magenta, yellow, black, or 00/01/10/11.",
+    )
+    parser.add_argument(
+        "--target",
+        help="Desired final colour or mix for custom mode, for example: magenta, 01, or '50 cyan / 50 magenta'.",
+    )
+    parser.add_argument(
+        "--gates",
+        default="",
+        help="Gate list to apply to your starting colour, for example: 'H(1)' or 'X(0) / X(1)'.",
+    )
+    parser.add_argument(
+        "--shots", type=int, default=500, help="Number of measurements to request."
+    )
+    parser.add_argument(
+        "--quokka", default="quokka1", help="Quokka name, for example quokka1."
+    )
     parser.add_argument(
         "--output",
         default=str(DEFAULT_OUTPUT_PATH),
@@ -1108,9 +1227,13 @@ def main():
         if args.target is not None:
             parser.error("--level cannot be used together with --target.")
         if args.start != "black":
-            parser.error("--level uses the level's own starting colour, so do not pass --start.")
+            parser.error(
+                "--level uses the level's own starting colour, so do not pass --start."
+            )
         if args.gates:
-            parser.error("--level starts the interactive level flow, so do not pass --gates.")
+            parser.error(
+                "--level starts the interactive level flow, so do not pass --gates."
+            )
 
         try:
             level = parse_level_file(Path(args.level))
