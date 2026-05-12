@@ -5,5 +5,5 @@ description: Starting from colour black, build any gate combo you like, and see 
 target: none
 max_gates: 10
 allowed_gates: I, X, Y, Z, H, RX, RY, RZ, CNOT, SWAP, CPHASE
-order: 2
+order: 6
 aliases: p, playground

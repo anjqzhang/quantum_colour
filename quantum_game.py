@@ -475,6 +475,7 @@ def parse_level_file(level_path: Path) -> dict:
         "id": config["id"].strip().lower(),
         "title": config["title"].strip(),
         "description": config["description"].strip(),
+        "hint": config.get("hint", "").strip(),
         "max_gates": int(config["max_gates"]),
         "allowed_gates": allowed_gates,
         "order": int(config["order"]),
@@ -483,6 +484,7 @@ def parse_level_file(level_path: Path) -> dict:
         "start_label": start_label,
         "target_state": target_state,
         "target_label": target_label,
+        "target_tolerance": float(config.get("target_tolerance", "1e-9")),
         "file_name": level_path.name,
     }
 
@@ -772,13 +774,22 @@ def write_qasm(program: str, output_path: Path) -> Path:
     return output_path
 
 
-def states_match_up_to_global_phase(
+def measurement_probabilities(state: np.ndarray) -> np.ndarray:
+    return np.abs(state) ** 2
+
+
+def state_matches_target_mix(
     actual: np.ndarray, desired: np.ndarray, tolerance: float = 1e-9
 ) -> bool:
     if actual.shape != desired.shape:
         return False
-    overlap = np.vdot(desired, actual)
-    return bool(np.isclose(abs(overlap), 1.0, atol=tolerance))
+    return bool(
+        np.allclose(
+            measurement_probabilities(actual),
+            measurement_probabilities(desired),
+            atol=tolerance,
+        )
+    )
 
 
 def int_to_measurement(value: int, qubit_count: int):
@@ -962,6 +973,7 @@ def print_round_report(
     start_label: str,
     target_label: str | None,
     target_state: np.ndarray | None,
+    target_tolerance: float,
     gates: List[dict],
     state: np.ndarray,
     measurements: List[int],
@@ -971,7 +983,7 @@ def print_round_report(
     success = (
         None
         if target_state is None
-        else states_match_up_to_global_phase(state, target_state)
+        else state_matches_target_mix(state, target_state, tolerance=target_tolerance)
     )
 
     print()
@@ -1038,6 +1050,7 @@ def run_round(
     start_label: str,
     target_state: np.ndarray | None,
     target_label: str | None,
+    target_tolerance: float,
     gate_text: str,
     shots: int,
     quokka_name: str,
@@ -1064,6 +1077,7 @@ def run_round(
         start_label,
         target_label,
         target_state,
+        target_tolerance,
         gates,
         state,
         measurements,
@@ -1084,6 +1098,8 @@ def print_level_intro(level_key: str):
     print()
     print(level["title"])
     print(level["description"])
+    if level["hint"]:
+        print(f"Hint: {level['hint']}")
     print(f"Starting colour: {level['start_label']}")
     print(f"Maximum gates: {level['max_gates']}")
     print_gate_help(level["allowed_gates"])
@@ -1142,6 +1158,8 @@ def play_level(level: dict, args):
         print()
         print(level["title"])
         print(level["description"])
+        if level["hint"]:
+            print(f"Hint: {level['hint']}")
         print(f"Starting colour: {level['start_label']}")
         print(f"Maximum gates: {level['max_gates']}")
         print_gate_help(level["allowed_gates"])
@@ -1154,6 +1172,7 @@ def play_level(level: dict, args):
             start_label=level["start_label"],
             target_state=level["target_state"],
             target_label=level["target_label"],
+            target_tolerance=level["target_tolerance"],
             gate_text=gate_text,
             shots=args.shots,
             quokka_name=args.quokka,
@@ -1261,6 +1280,7 @@ def main():
         start_label=start_label,
         target_state=target_state,
         target_label=target_label,
+        target_tolerance=1e-9,
         gate_text=args.gates,
         shots=args.shots,
         quokka_name=args.quokka,

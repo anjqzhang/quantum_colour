@@ -1,0 +1,11 @@
+# Level 5 : Swapped Sunset
+id: 5
+title: Level 5 - Swapped Sunset
+description: Start from cyan |00> and create a warm mix with 75% cyan and 25% yellow.
+hint: Try building the blend on one qubit first, then move it into place.
+start: cyan
+target: 75 cyan / 25 yellow
+max_gates: 2
+allowed_gates: RY, SWAP
+order: 5
+aliases: 5, lv5, level5, swap, swapped

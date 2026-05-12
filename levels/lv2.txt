@@ -1,0 +1,11 @@
+# Level 2 : Blendy Blend
+id: 2
+title: Level 2 - Blendy Blend
+description: Start from cyan |00> and create an equal mix of cyan, magenta, yellow, and black.
+hint: create a blend in both qubits.
+start: cyan
+target: 25 cyan / 25 magenta / 25 yellow / 25 black
+max_gates: 2
+allowed_gates: H
+order: 2
+aliases: 2, lv2, level2, blend
