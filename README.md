@@ -8,50 +8,53 @@ OpenAI codex was used to write part of the functions, and was involved in debugg
 
 The game mechanism and the levels are purely done by human.
 
-## Prototype
+## Play interactive levels
 
-This prototype uses a two-qubit CMYK model with the four computational basis states:
+```bash
+python quantum_game.py
+```
 
+## Playing around CMYK colours
+
+Don't panic. We are using two qubits to give you any combination of four basis colours:
 - `|00>`: cyan
 - `|01>`: magenta
 - `|10>`: yellow
 - `|11>`: black
 
-When the game starts, it asks the player which mode to enter:
+When the game starts, you can choose from the preset levels, or playground:
 
 - `Level 1`: start from cyan `|00>`, target a 50-50 cyan/magenta mix, using one `H` gate.
 - `Playground`: build your own circuit with the available single-qubit and two-qubit gates.
 
 The levels are defined in [levels](./levels).
 
-In each level, player will have access to ristricted magics, and can only input no more than a certain number of magics.
+In each level, you will have access to ristricted magics, and can only input no more than a certain number of magics.
 
 There is no "standard answer" - use any combination of magics within the constraints to create target colour and you will get a YAY!
+
+## Magics
+
+Magics are single-qubit gates and two-qubit gates. Here we provide a simple yet powerful set of "universal gates": you can theoretically reach any colour mix with these gates.
+
+### Single-qubit gates:
+- `X`: state flip
+- `Y`: phase flip
+- `Z`: state & phase flip
+- `RX`, `RY`, `RZ`: rotations around `x`, `y`, or `z` axis
+
+Single-qubit gates default to qubit 0. For rotation gates with two arguments, the first argument must be the qubit number and the second must be the angle, for example `RX(1, pi/2)`, `RY(1, pi/3)`, or `RZ(1, -pi/4)`
+
+### Two-qubit gates:
+- `CNOT`: controlled-NOT
+- `SWAP`: ...swap.
+- `CPHASE`: controlled phase flip
+
+Use syntax like `CNOT(0,1)`, `SWAP(0,1)`, and `CPHASE(0,1)`.
 
 ## Playground
 
 There's no target here. Default starting colour is black. Apply any magic available to create your own superposition! Maximum 10 magics. Playground supports single-qubit gates and the two-qubit gates `CNOT`, `SWAP`, and `CPHASE`.
-
-## Play the game
-
-Interactive levels:
-
-```bash
-python quantum_game.py
-```
-
-Two-qubit CMYK tutorial target:
-
-```bash
-python quantum_game.py --start cyan --target "50 cyan / 50 magenta" --gates "H(1)" --shots 500
-```
-
-Two-qubit gates use explicit qubit indexes:
-
-```bash
-python quantum_game.py --start cyan --target 11 --gates "X(0) / X(1)" --shots 500
-python quantum_game.py --start cyan --target "50 cyan / 50 black" --gates "H(0) / CNOT(0,1)" --shots 500
-```
 
 ## Write your own level
 
@@ -63,15 +66,19 @@ Run the game from a file path to the level file:
 python quantum_game.py --level levels/lv1.txt
 ```
 
+## Start a single custom play run
+
+```bash
+python quantum_game.py --start cyan --target "50 cyan / 50 magenta" --gates "H(1)" --shots 500
+```
+```bash
+python quantum_game.py --start cyan --target "50 cyan / 50 black" --gates "H(0) / CNOT(0,1)" --shots 500
+```
 
 ## Notes
 
 - Supported gates: `I` as a game-level no-op, plus Quokka-backed `X`, `Y`, `Z`, `H`, `RX`, `RY`, `RZ`, `CNOT`, `SWAP`, and `CPHASE`.
-- `--start` accepts only the four CMYK colours or basis states: `cyan`, `magenta`, `yellow`, `black`, `00`, `01`, `10`, or `11`.
+- `--start` accepts only the basis states: `cyan`, `magenta`, `yellow`, `black`, `00`, `01`, `10`, or `11`.
 - `--target` accepts a CMYK colour, a basis state like `01`, or a weighted mix like `"50 cyan / 50 magenta"`.
-- Single-qubit gates default to qubit 0. For rotation gates with two arguments, the first argument must be the qubit number and the second must be the angle, for example `RX(1, pi/2)`, `RY(1, pi/3)`, or `RZ(1, -pi/4)`.
-- Two-qubit gates use syntax like `CNOT(0,1)`, `SWAP(0,1)`, and `CPHASE(0,1)`.
-- `RX(theta)` is compiled to `H RZ(theta) H` before sending QASM to Quokka, because the live Quokka backend accepts `RZ` and `H` but currently rejects direct `RX`.
-- `SWAP` is compiled to three `CNOT` gates, and `CPHASE` is compiled to `H`, `CNOT`, `H`.
 - Measurement plots draw every shot as a semi-transparent coloured circle in a box, so overlapping circles visually mimic a mixed colour.
 - Quokka access is required for measurements.

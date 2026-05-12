@@ -1,10 +1,10 @@
-# Level 1 : CMYK cyan-magenta mix
+# Level 1 : Cyan and magenta
 id: 1
-title: Level 1 - Vibrant Purple
+title: Level 1 - An even mix
 description: Start from cyan |00> and create an equal cyan/magenta mix. Hint: apply a Hadamard to qubit 1.
 start: cyan
 target: 50 cyan / 50 magenta
 max_gates: 1
 allowed_gates: H
 order: 1
-aliases: 1, lv1, level1, purple
+aliases: 1, lv1, level1
