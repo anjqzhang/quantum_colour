@@ -29,7 +29,7 @@ function App() {
   const [selectedLevelId, setSelectedLevelId] = useState(levels[0].id);
   const [gates, setGates] = useState<Gate[]>([]);
   const [rawGateText, setRawGateText] = useState("");
-  const [gateFamily, setGateFamily] = useState<GateFamily>("H");
+  const [gateFamily, setGateFamily] = useState<GateFamily>(levels[0].allowedGates[0] ?? "H");
   const [firstQubit, setFirstQubit] = useState("0");
   const [secondQubit, setSecondQubit] = useState("1");
   const [angleText, setAngleText] = useState("pi/2");
@@ -41,7 +41,9 @@ function App() {
   const level = levels.find((item) => item.id === selectedLevelId) ?? levels[0];
 
   function selectLevel(id: string) {
+    const nextLevel = levels.find((item) => item.id === id) ?? levels[0];
     setSelectedLevelId(id);
+    setGateFamily(nextLevel.allowedGates[0] ?? "H");
     setGates([]);
     setRawGateText("");
     setMessage(null);
@@ -183,11 +185,11 @@ function App() {
 
           <div className="target-row">
             <div>
-              <span className="label">Target</span>
+              <span className="label">Target:</span>
               <strong>{level.targetLabel ?? "Playground mode"}</strong>
             </div>
             <div>
-              <span className="label">Allowed gates</span>
+              <span className="label">Allowed gates:</span>
               <strong>{level.allowedGates.join(", ")}</strong>
             </div>
           </div>
