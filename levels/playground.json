@@ -1,0 +1,11 @@
+{
+  "id": "playground",
+  "title": "Playground",
+  "description": "Starting from colour black, build any gate combo you like, and see the measured colours.",
+  "start": "black",
+  "target": null,
+  "maxGates": 10,
+  "allowedGates": ["I", "X", "Y", "Z", "H", "RX", "RY", "RZ", "CNOT", "SWAP", "CPHASE"],
+  "order": 6,
+  "aliases": ["p", "playground"]
+}

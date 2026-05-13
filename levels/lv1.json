@@ -1,0 +1,12 @@
+{
+  "id": "1",
+  "title": "Level 1 - Mix Cyan",
+  "description": "Start from cyan |00> and create a 50-50 cyan/magenta mix.",
+  "hint": "Changing one qubit is enough to create a blend.",
+  "start": "cyan",
+  "target": "50 cyan / 50 magenta",
+  "maxGates": 1,
+  "allowedGates": ["H"],
+  "order": 1,
+  "aliases": ["1", "lv1", "level1", "mix"]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "5",
+  "title": "Level 5 - Swap Around",
+  "description": "Start from cyan |00> and create a mix with 75% cyan and 25% yellow.",
+  "hint": "Try building the blend on one qubit first, then move it into place.",
+  "start": "cyan",
+  "target": "75 cyan / 25 yellow",
+  "maxGates": 2,
+  "allowedGates": ["RY", "SWAP"],
+  "order": 5,
+  "aliases": ["5", "lv5", "level5", "swap"]
+}

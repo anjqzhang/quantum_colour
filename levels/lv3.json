@@ -1,0 +1,12 @@
+{
+  "id": "3",
+  "title": "Level 3 - Forbidden Colours",
+  "description": "Start from cyan |00> and create a 50-50 cyan/black mix with no magenta and no yellow.",
+  "hint": "Entangle two qubits using the new tool.",
+  "start": "cyan",
+  "target": "50 cyan / 50 black",
+  "maxGates": 2,
+  "allowedGates": ["H", "CNOT"],
+  "order": 3,
+  "aliases": ["3", "lv3", "level3", "forbidden"]
+}
