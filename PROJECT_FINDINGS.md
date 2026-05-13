@@ -21,7 +21,7 @@ Players start from a basis colour, apply a constrained set of quantum "magics" o
 - `src/App.tsx`: main React game UI.
 - `functions/api/quokka.ts`: Cloudflare Pages Function proxy for Quokka.
 - `README.md`: user-facing overview, examples, gate syntax, and level authoring notes.
-- `levels/*.txt`: level definitions in a simple key-value text format.
+- `levels/*.json`: level definitions, one JSON file per level.
 - `.gitignore`: ignores `.mplcache/`, `__pycache__/`, and generated output.
 
 The former Python CLI file, `quantum_game.py`, was removed after the webapp implementation. Preserve the notes below if a Node CLI is rebuilt.
@@ -88,7 +88,7 @@ Current bundled levels:
 
 The normal run path is:
 
-1. React loads bundled level definitions from `src/levels.ts`.
+1. React loads bundled level definitions from JSON files in `levels/` via `src/levels.ts`.
 2. The user selects a level or playground.
 3. The user adds gates through the builder or raw gate text.
 4. The TypeScript engine parses gates, validates level constraints, simulates the final state locally, and builds OpenQASM.
@@ -100,8 +100,8 @@ The normal run path is:
 
 The removed `quantum_game.py` was a single-file Python CLI with these user-facing modes:
 
-- `python quantum_game.py`: starts an interactive mode menu using levels from `levels/*.txt`.
-- `python quantum_game.py --level levels/lv1.txt`: loads a specific level file and starts the same interactive level loop.
+- `python quantum_game.py`: started an interactive mode menu using levels from `levels/*.txt`.
+- `python quantum_game.py --level levels/lv1.txt`: loaded a specific legacy text level file and started the same interactive level loop.
 - `python quantum_game.py --start cyan --target "50 cyan / 50 magenta" --gates "H(1)" --shots 500`: runs one custom, non-interactive round.
 
 Important CLI options:

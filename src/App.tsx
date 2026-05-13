@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { levels } from "./levels";
-import { isPublicSiteUrlConfigured, publicSiteUrl } from "./config";
 import {
   applyGates,
   buildDotStrip,
@@ -147,9 +146,6 @@ function App() {
           <p className="hero-copy">
             Build a gate sequence, send the generated OpenQASM to Quokka, and watch measurement shots
             become colour.
-          </p>
-          <p className={isPublicSiteUrlConfigured ? "domain-pill configured" : "domain-pill"}>
-            {isPublicSiteUrlConfigured ? `Publishing domain: ${publicSiteUrl}` : "Publishing domain not configured"}
           </p>
         </div>
         <div className="basis-card">

@@ -6,6 +6,8 @@ node_modules/
 coverage/
 *.tsbuildinfo
 .wrangler/
+.idea/
+.pnpm-store/
 
 # Local environment and deploy config
 .env
@@ -17,5 +19,4 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-pnpm-lock.yaml
 pnpm-workspace.yaml

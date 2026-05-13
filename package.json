@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.22.0",
   "scripts": {
-    "dev": "npm run build && XDG_CONFIG_HOME=.wrangler/config wrangler pages dev dist --compatibility-date=2026-05-13 --inspector-port=0 --persist-to=.wrangler/state",
+    "dev": "pnpm build && XDG_CONFIG_HOME=.wrangler/config wrangler pages dev dist --compatibility-date=2026-05-13 --inspector-port=0 --persist-to=.wrangler/state",
     "dev:vite": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "predeploy": "node scripts/check-domain-config.mjs",
-    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy": "pnpm build && wrangler pages deploy dist",
     "test": "vitest run"
   },
   "dependencies": {

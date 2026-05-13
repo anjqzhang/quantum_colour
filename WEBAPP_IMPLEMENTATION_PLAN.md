@@ -11,8 +11,7 @@ Recommended deployment: Cloudflare Pages, because it can host the static Vite ap
 - Frontend: React + Vite + TypeScript.
 - Styling: plain CSS with CSS variables.
 - Backend: one Cloudflare Pages Function, `POST /api/quokka`, used only to forward `{ script, count, quokkaName }` to Quokka and normalize errors.
-- Hosting: Cloudflare Pages for hosted app; localhost via `npm run dev` using Wrangler.
-- Domain config: set `VITE_PUBLIC_SITE_URL` per environment. The sentinel value is `__DOMAIN_NOT_CONFIGURED__`; production should use `https://quantum-color.theos.me` unless changed later.
+- Hosting: Cloudflare Pages for hosted app; localhost via `pnpm dev` using Wrangler.
 - Testing: Vitest for game-engine unit tests; React Testing Library can be added later for core UI behavior.
 
 ## Key Implementation Changes
@@ -21,7 +20,7 @@ Recommended deployment: Cloudflare Pages, because it can host the static Vite ap
   - Gate parsing, aliases, angle parsing, level validation, target parsing, state-vector simulation, QASM generation, measurement normalization, and target matching.
   - Use browser-native arrays and a small `Complex` helper instead of NumPy.
   - Keep the current two-qubit limit and current gate set: `I`, `X`, `Y`, `Z`, `H`, `RX`, `RY`, `RZ`, `CNOT`, `SWAP`, `CPHASE`.
-- Convert `levels/*.txt` into checked-in TypeScript data:
+- Convert `levels/*.txt` into checked-in JSON data:
   - Keep the same level content and constraints.
   - Include playground as a normal mode with `target: null`.
 - Build a browser UI with:
@@ -36,7 +35,6 @@ Recommended deployment: Cloudflare Pages, because it can host the static Vite ap
   - Show counts/proportions and the existing symbolic strip equivalent.
 - Keep QASM visible/downloadable in the UI for transparency and debugging.
 - Keep notes about the removed Python CLI in `PROJECT_FINDINGS.md` so a future Node CLI can reuse the TypeScript game engine.
-- Refuse CLI deploys while `VITE_PUBLIC_SITE_URL` is still the sentinel value so accidental publishes are visible.
 
 ## API Interface
 
@@ -66,7 +64,7 @@ Recommended deployment: Cloudflare Pages, because it can host the static Vite ap
   - Disallowed gates for a level.
 - Unit-test QASM generation for each supported gate family.
 - Manual acceptance:
-  - `npm run dev` opens a playable localhost app.
+- `pnpm dev` opens a playable localhost app.
 - Hosted Cloudflare Pages deployment can complete at least one Quokka-backed run.
   - Browser console has no CORS errors when calling `/api/quokka`.
 

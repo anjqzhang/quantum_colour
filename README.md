@@ -9,50 +9,36 @@ The primary version is now a React + Vite webapp. It runs the game UI and local 
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Run locally with Cloudflare Wrangler so `/api/quokka` is available:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 For frontend-only development without Quokka calls:
 
 ```bash
-npm run dev:vite
+pnpm dev:vite
 ```
 
 Build and test:
 
 ```bash
-npm run build
-npm test
+pnpm build
+pnpm test
 ```
 
-## Publishing domain
+The app can be hosted on Cloudflare Pages. Use `pnpm build` as the build command and `dist` as the output directory. The Quokka proxy lives at `functions/api/quokka.ts`.
 
-The public hosting domain is configured through `VITE_PUBLIC_SITE_URL`. The default sentinel value is:
-
-```bash
-VITE_PUBLIC_SITE_URL=__DOMAIN_NOT_CONFIGURED__
-```
-
-For the intended production domain, set:
-
-```bash
-VITE_PUBLIC_SITE_URL=https://quantum-color.theos.me
-```
-
-You can set this in `.env.local` for local builds, or as a Cloudflare Pages environment variable for production. `npm run deploy` refuses to publish while the sentinel value is still active.
-
-The app can be hosted on Cloudflare Pages. Use `npm run build` as the build command and `dist` as the output directory. The Quokka proxy lives at `functions/api/quokka.ts`.
+Configure the public domain in Cloudflare Pages. The intended production domain is `quantum-color.theos.me`.
 
 Deploy from the CLI if the project is already linked to Cloudflare:
 
 ```bash
-npm run deploy
+pnpm deploy
 ```
 
 ## AI disclaimer
@@ -78,7 +64,7 @@ When the game starts, you can choose from the preset levels, or playground:
 - `Level 5 - Swap Around`: a weighted cyan/yellow blend that teaches `SWAP`.
 - `Playground`: build your own circuit with the available single-qubit and two-qubit gates.
 
-The levels are defined in [levels](./levels).
+The levels are defined as JSON files in [levels](./levels).
 
 In each level, you will have access to ristricted magics, and can only input no more than a certain number of magics.
 
@@ -109,7 +95,7 @@ There's no target here. Default starting colour is black. Apply any magic availa
 
 ## Level source
 
-The original level definitions are retained in [levels](./levels). The webapp currently uses the TypeScript copy in [src/levels.ts](./src/levels.ts).
+Level definitions live in [levels](./levels) as one JSON file per level. The webapp imports those files through [src/levels.ts](./src/levels.ts).
 
 ## Example gate sequences
 
