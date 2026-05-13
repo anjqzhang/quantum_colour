@@ -43,7 +43,7 @@ pnpm deploy:app
 
 ## AI disclaimer
 
-OpenAI codex was used to write part of the functions, and was involved in debugging. All code is reviewed by human.
+OpenAI codex was used to write part (all) of the functions, and was involved in debugging. All (no) code is reviewed by human.
 
 The game mechanism and the levels are purely done by human.
 
