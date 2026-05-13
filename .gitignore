@@ -1,3 +1,21 @@
 .mplcache/
 __pycache__/
 generated/
+dist/
+node_modules/
+coverage/
+*.tsbuildinfo
+.wrangler/
+
+# Local environment and deploy config
+.env
+.env.local
+.env.*.local
+
+# Package-manager/debug noise
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pnpm-lock.yaml
+pnpm-workspace.yaml
