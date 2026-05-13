@@ -38,7 +38,7 @@ Configure the public domain in Cloudflare Pages. The intended production domain 
 Deploy from the CLI if the project is already linked to Cloudflare:
 
 ```bash
-pnpm deploy
+pnpm deploy:app
 ```
 
 ## AI disclaimer
