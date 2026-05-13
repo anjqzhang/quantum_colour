@@ -15,7 +15,19 @@ pnpm install
 Run locally with Cloudflare Wrangler so `/api/quokka` is available:
 
 ```bash
+# Build the app and run Cloudflare Pages locally
 pnpm dev
+```
+
+Run locally with hot-reloading for development
+```bash
+# In separate terminals
+
+# Rebuild on file changes
+pnpm build:watch
+
+# Run Cloudflare Pages locally
+pnpm wrangler:dev
 ```
 
 For frontend-only development without Quokka calls:

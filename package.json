@@ -5,6 +5,8 @@
   "type": "module",
   "packageManager": "pnpm@10.22.0",
   "scripts": {
+    "build:watch": "pnpm build --watch",
+    "wrangler:dev": "XDG_CONFIG_HOME=.wrangler/config wrangler pages dev dist --compatibility-date=2026-05-13 --inspector-port=0 --persist-to=.wrangler/state",
     "dev": "pnpm build && XDG_CONFIG_HOME=.wrangler/config wrangler pages dev dist --compatibility-date=2026-05-13 --inspector-port=0 --persist-to=.wrangler/state",
     "dev:vite": "vite",
     "build": "tsc -b && vite build",
