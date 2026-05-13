@@ -31,15 +31,55 @@ pnpm build
 pnpm test
 ```
 
-The app can be hosted on Cloudflare Pages. Use `pnpm build` as the build command and `dist` as the output directory. The Quokka proxy lives at `functions/api/quokka.ts`.
+Architecture notes live in [architecture](./architecture).
 
-Configure the public domain in Cloudflare Pages. The intended production domain is `quantum-color.theos.me`.
+## Hosting On Cloudflare Pages
 
-Deploy from the CLI if the project is already linked to Cloudflare:
+The default Cloudflare Pages project name is `quantum-colour`, configured in [wrangler.jsonc](./wrangler.jsonc). The build output directory is `dist`, and the Quokka proxy is the Pages Function at [functions/api/quokka.ts](./functions/api/quokka.ts).
+
+If you deploy your own copy and need a different Pages project name, update `name` in `wrangler.jsonc` before creating or deploying the project:
+
+```jsonc
+{
+  "name": "your-pages-project-name",
+  "pages_build_output_dir": "dist"
+}
+```
+
+One-time Cloudflare setup:
+
+1. Log in to Cloudflare from the CLI:
+
+```bash
+pnpm wrangler login
+```
+
+2. Create the Pages project if it does not already exist:
+
+```bash
+pnpm wrangler pages project create quantum-colour --production-branch cmyk-web-app
+```
+
+3. Deploy the app:
 
 ```bash
 pnpm deploy:app
 ```
+
+The deploy script runs `pnpm build` and then `wrangler pages deploy dist`. If you need to pass a branch explicitly, use:
+
+```bash
+pnpm build
+pnpm wrangler pages deploy dist --branch main
+```
+
+Custom domain setup:
+
+1. In Cloudflare, open Workers & Pages, then the `quantum-colour` Pages project.
+2. Go to Custom domains and add `quantum-color.example.com`.
+3. If `example.com` DNS is managed by Cloudflare, accept the DNS record Cloudflare creates.
+4. If DNS is managed elsewhere, manually add the CNAME record Cloudflare shows for `quantum-color.example.com`.
+5. Wait for Cloudflare to issue the certificate and mark the domain active.
 
 ## AI disclaimer
 
