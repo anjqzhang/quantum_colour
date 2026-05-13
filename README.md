@@ -61,12 +61,6 @@ OpenAI codex was used to write part of the functions, and was involved in debugg
 
 The game mechanism and the levels are purely done by human.
 
-## Legacy Python CLI
-
-```bash
-python quantum_game.py
-```
-
 ## Playing around CMYK colours
 
 Don't panic. We are using two qubits to give you any combination of four basis colours:
@@ -113,39 +107,31 @@ Use syntax like `CNOT(0,1)`, `SWAP(0,1)`, and `CPHASE(0,1)`.
 
 There's no target here. Default starting colour is black. Apply any magic available to create your own superposition! Maximum 10 magics. Playground supports single-qubit gates and the two-qubit gates `CNOT`, `SWAP`, and `CPHASE`.
 
-## Write your own level
+## Level source
 
-Each level is just a .txt file. You can create your own level by editing the existing levels file.
+The original level definitions are retained in [levels](./levels). The webapp currently uses the TypeScript copy in [src/levels.ts](./src/levels.ts).
 
-Run the game from a file path to the level file:
-
-```bash
-python quantum_game.py --level levels/lv1.txt
-```
-
-## Start a single custom play run
+## Example gate sequences
 
 ```bash
-python quantum_game.py --start cyan --target "50 cyan / 50 magenta" --gates "H(1)" --shots 500
+H(1)
 ```
 
 ```bash
-python quantum_game.py --start cyan --target "50 cyan / 50 black" --gates "H(0) / CNOT(0,1)" --shots 500
+H(0) / CNOT(0,1)
 ```
 
 ```bash
-python quantum_game.py --start cyan --target "75 cyan / 25 magenta" --gates "RY(1, pi/3)" --shots 500
+RY(1, pi/3)
 ```
 
 ```bash
-python quantum_game.py --start cyan --target "75 cyan / 25 yellow" --gates "RY(1, pi/3) / SWAP(0,1)" --shots 500
+RY(1, pi/3) / SWAP(0,1)
 ```
 
 ## Notes
 
 - Supported gates: `I` as a game-level no-op, plus Quokka-backed `X`, `Y`, `Z`, `H`, `RX`, `RY`, `RZ`, `CNOT`, `SWAP`, and `CPHASE`.
-- `--start` accepts only the basis states: `cyan`, `magenta`, `yellow`, `black`, `00`, `01`, `10`, or `11`.
-- `--target` accepts a CMYK colour, a basis state like `01`, or a weighted mix like `"50 cyan / 50 magenta"`.
 - Level success is checked against the target colour probabilities, not exact quantum phase. That keeps colour-mixing levels intuitive and allows some tolerance where appropriate.
-- Measurement plots draw every shot as a semi-transparent coloured circle in a box, so overlapping circles visually mimic a mixed colour.
+- Measurement plots draw every shot as a semi-transparent coloured circle, so overlapping circles visually mimic a mixed colour.
 - Quokka access is required for measurements.

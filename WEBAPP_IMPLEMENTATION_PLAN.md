@@ -35,7 +35,7 @@ Recommended deployment: Cloudflare Pages, because it can host the static Vite ap
   - Use SVG for the semi-transparent measurement-dot colour plot.
   - Show counts/proportions and the existing symbolic strip equivalent.
 - Keep QASM visible/downloadable in the UI for transparency and debugging.
-- Keep the old Python CLI in the repo initially as reference, but make the webapp the primary path in README.
+- Keep notes about the removed Python CLI in `PROJECT_FINDINGS.md` so a future Node CLI can reuse the TypeScript game engine.
 - Refuse CLI deploys while `VITE_PUBLIC_SITE_URL` is still the sentinel value so accidental publishes are visible.
 
 ## API Interface

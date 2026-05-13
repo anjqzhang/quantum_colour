@@ -6,7 +6,7 @@ This file records a working understanding of the project for future Codex sessio
 
 ## Purpose
 
-`quantum_colour` is a small Python CLI game called "Colour Mixer, a quantum game". It teaches basic quantum operations by mapping two-qubit computational basis states to CMYK-style colours:
+`quantum_colour` is a browser-based game called "Colour Mixer, a quantum game". It teaches basic quantum operations by mapping two-qubit computational basis states to CMYK-style colours:
 
 - `|00>`: cyan
 - `|01>`: magenta
@@ -17,26 +17,28 @@ Players start from a basis colour, apply a constrained set of quantum "magics" o
 
 ## Repository Shape
 
-- `quantum_game.py`: all application logic, CLI, state-vector simulation, QASM generation, Quokka integration, result reporting, and plotting.
+- `src/game/*`: browser and testable TypeScript game engine, including parsing, state-vector simulation, QASM generation, measurement normalization, and target matching.
+- `src/App.tsx`: main React game UI.
+- `functions/api/quokka.ts`: Cloudflare Pages Function proxy for Quokka.
 - `README.md`: user-facing overview, examples, gate syntax, and level authoring notes.
 - `levels/*.txt`: level definitions in a simple key-value text format.
 - `.gitignore`: ignores `.mplcache/`, `__pycache__/`, and generated output.
 
-There is currently no dependency manifest such as `requirements.txt`, `pyproject.toml`, or lockfile.
+The former Python CLI file, `quantum_game.py`, was removed after the webapp implementation. Preserve the notes below if a Node CLI is rebuilt.
 
 ## Runtime Dependencies
 
-The code imports:
+The webapp uses:
 
-- `numpy`
-- `requests`
-- `matplotlib`
+- React + Vite + TypeScript
+- Cloudflare Pages Functions through Wrangler
+- Quokka over HTTPS via same-origin `/api/quokka`
 
-The game sends generated OpenQASM to Quokka over HTTP via `requests.post("http://{quokka}.quokkacomputing.com/qsim/qasm", ...)`. Network access and a reachable Quokka endpoint are required for measurements. Local state-vector simulation and QASM generation happen before the Quokka call.
+The browser app sends generated OpenQASM to `/api/quokka`; the Cloudflare Function forwards it to `https://{quokka}.quokkacomputing.com/qsim/qasm`. Network access and a reachable Quokka endpoint are required for measurements. Local state-vector simulation and QASM generation happen before the Quokka call.
 
 ## Main Concepts
 
-Supported gates are defined in `quantum_game.py`:
+Supported gates are defined in the TypeScript game engine:
 
 - Fixed single-qubit gates: `I`, `X`, `Y`, `Z`, `H`
 - Rotation gates: `RX`, `RY`, `RZ`
@@ -82,17 +84,64 @@ Current bundled levels:
 - Level 5: create a 75/25 cyan-yellow blend using `RY` and `SWAP`.
 - Playground: no target, max 10 gates, all supported gates allowed.
 
-## Execution Flow
+## Webapp Execution Flow
 
 The normal run path is:
 
-1. CLI arguments are parsed in `build_parser()` and `main()`.
-2. With no `--target`, the interactive level menu is launched.
-3. With `--level`, an external level file is parsed and played interactively.
-4. With `--target`, a single custom run is executed from CLI arguments.
-5. `run_round()` parses gate text, validates allowed/max gates, simulates the state locally, builds QASM, writes the QASM file, asks Quokka for measurements, plots results, and prints a round report.
+1. React loads bundled level definitions from `src/levels.ts`.
+2. The user selects a level or playground.
+3. The user adds gates through the builder or raw gate text.
+4. The TypeScript engine parses gates, validates level constraints, simulates the final state locally, and builds OpenQASM.
+5. The browser posts QASM to `/api/quokka`.
+6. The Cloudflare Pages Function forwards to Quokka and returns normalized measurements.
+7. The UI renders an SVG measurement plot, counts, dot strip, QASM, and YAY/NAY based on local simulated probabilities.
 
-Default generated output path is `generated/player_circuit.qasm`; the measurement plot is written beside it as `player_circuit_measurements.png`.
+## Former Python CLI Behavior For Node Reimplementation
+
+The removed `quantum_game.py` was a single-file Python CLI with these user-facing modes:
+
+- `python quantum_game.py`: starts an interactive mode menu using levels from `levels/*.txt`.
+- `python quantum_game.py --level levels/lv1.txt`: loads a specific level file and starts the same interactive level loop.
+- `python quantum_game.py --start cyan --target "50 cyan / 50 magenta" --gates "H(1)" --shots 500`: runs one custom, non-interactive round.
+
+Important CLI options:
+
+- `--level`: path to a level file. Mutually exclusive with `--target`, `--start`, and `--gates` because it launches the interactive level flow.
+- `--start`: basis-only starting colour for custom mode. Accepted `cyan`, `magenta`, `yellow`, `black`, `00`, `01`, `10`, `11`. Default was `black`.
+- `--target`: desired basis state or weighted CMYK mix for custom mode. Examples: `magenta`, `01`, `50 cyan / 50 magenta`.
+- `--gates`: raw gate list, separated by spaces, commas, or `/`; default empty.
+- `--shots`: positive integer measurement count; default `500`.
+- `--quokka`: Quokka hostname prefix; default `quokka1`.
+- `--output`: QASM output path; default `generated/player_circuit.qasm`.
+
+Interactive behavior to preserve in a Node CLI:
+
+- Print title, description, hint, starting colour, maximum gates, and allowed gate help for the selected level.
+- Prompt for gate text until it parses and satisfies `allowed_gates` and `max_gates`.
+- Run a round and then prompt for next action: replay level, return to menu, or quit.
+- Playground is represented as a level with `target: none`; it has no success check.
+
+Round behavior to preserve:
+
+- Parse gate text into canonical gate records.
+- Validate gate count and allowed gate families.
+- Simulate final state locally.
+- Build OpenQASM 2.0.
+- Write QASM to the configured output file.
+- Request Quokka measurements.
+- On success, write a measurement plot beside the QASM file as `{qasm_stem}_measurements.png`, print a colour strip, and print YAY/NAY unless in playground mode.
+- On Quokka failure, print the selected mode, starting colour, target, gate sequence, QASM path, and the Quokka error.
+
+Former Python-only implementation details:
+
+- Used `numpy` arrays for complex state vectors and matrix operations.
+- Used `requests.post` to call `http://{quokka}.quokkacomputing.com/qsim/qasm` with `{ script, count }`; the webapp now uses HTTPS through the Cloudflare proxy.
+- Used Matplotlib with `Agg` backend to draw semi-transparent measurement circles.
+- Set `MPLCONFIGDIR` to `.mplcache` under the repo.
+- Success was always based on local probabilities, not sampled measurement counts.
+- Quokka response shapes accepted were `{"result": {"c": ...}}`, `{"c": ...}`, and `{"data": {"c": ...}}`.
+
+The current TypeScript game engine already contains most logic needed for a Node CLI. A Node CLI should reuse `src/game/*` for parsing, simulation, QASM, target matching, validation, and measurement normalization, then add terminal prompts, filesystem QASM output, and optionally a Node-side SVG/PNG plotter.
 
 ## Simulation And QASM
 
@@ -111,7 +160,7 @@ QASM generation:
 - Converts `RX` to `h`, `rz`, `h`, likely because the target backend supports that decomposition.
 - Appends measurement statements for all qubits.
 
-One implementation constraint: QASM preparation only supports computational-basis starting colours for multi-qubit states. That is fine for the current CLI and level model because `--start` and level `start` are restricted to basis states.
+One implementation constraint: QASM preparation only supports computational-basis starting colours for multi-qubit states. That was fine for the former CLI and remains fine for the current level model because starts are restricted to basis states.
 
 ## Output And Success
 
@@ -130,19 +179,16 @@ Success uses local simulated probabilities compared with target probabilities vi
 
 ## Verification Notes
 
-Commands run during review:
+Commands run during the original Python review:
 
-- `python3 -m py_compile quantum_game.py`: passed.
-- `python3 quantum_game.py --help`: failed in the current environment with `ModuleNotFoundError: No module named 'numpy'`.
+- `python3 -m py_compile quantum_game.py`: passed before removal.
+- `python3 quantum_game.py --help`: failed in the then-current environment with `ModuleNotFoundError: No module named 'numpy'`.
 
-The failure indicates missing local Python dependencies, not necessarily a code defect. Add a dependency manifest or install `numpy`, `requests`, and `matplotlib` before running the game or adding automated tests.
+The failure indicated missing local Python dependencies, not necessarily a code defect. The Python implementation has since been removed.
 
 ## Maintenance Risks And Opportunities
 
-- Add `requirements.txt` or `pyproject.toml` so setup is reproducible.
-- Add tests for parsing, gate application, QASM generation, level loading, and target matching. These can run offline without Quokka.
-- Consider separating the single-file app into modules only if the project grows; current size is manageable for a prototype but hard to test cleanly.
+- Add more tests for parsing, gate application, QASM generation, level loading, and target matching. These can run offline without Quokka.
 - Consider an offline measurement mode using `np.random.choice` from local probabilities. This would make demos/tests work without Quokka.
 - Review the `Y` gate description: the README says `Y` is a phase flip and `Z` is state and phase flip, but the code implements standard Pauli matrices where `X` flips, `Z` phase-flips, and `Y` is bit flip plus phase.
-- `print_level_intro()` appears unused; remove it or wire it in if a separate intro step is desired.
 - Level 5 aliases include `swap` twice; harmless but worth cleaning.
