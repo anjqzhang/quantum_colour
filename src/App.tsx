@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { levels } from "./levels";
 import {
   applyGates,
@@ -39,14 +39,6 @@ function App() {
   const [runState, setRunState] = useState<RunState>({ status: "idle" });
 
   const level = levels.find((item) => item.id === selectedLevelId) ?? levels[0];
-  const simulatedState = useMemo(() => {
-    try {
-      return applyGates(gates, level.startState);
-    } catch {
-      return level.startState;
-    }
-  }, [gates, level.startState]);
-  const probabilities = simulatedState.map((value) => value.re * value.re + value.im * value.im);
 
   function selectLevel(id: string) {
     setSelectedLevelId(id);
@@ -236,8 +228,6 @@ function App() {
             setRunState({ status: "idle" });
           }} />
 
-          <ProbabilityPreview probabilities={probabilities} />
-
           <div className="run-row">
             <label>
               Shots
@@ -350,21 +340,6 @@ function Circuit({ gates, onRemove, onReset }: { gates: Gate[]; onRemove: (index
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function ProbabilityPreview({ probabilities }: { probabilities: number[] }) {
-  const keys = ["00", "01", "10", "11"] as const;
-  return (
-    <div className="probability-grid">
-      {keys.map((key, index) => (
-        <div className="probability-card" key={key}>
-          <span className="swatch" style={{ background: cmykColors[key] }} />
-          <span>|{key}&gt; {measurementName(key)}</span>
-          <strong>{(probabilities[index] * 100).toFixed(1)}%</strong>
-        </div>
-      ))}
     </div>
   );
 }

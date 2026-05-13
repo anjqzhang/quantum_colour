@@ -127,7 +127,6 @@ h1 {
 }
 
 .basis-row,
-.probability-card,
 .counts-grid > div {
   display: flex;
   align-items: center;
@@ -335,14 +334,12 @@ select {
   opacity: 0.74;
 }
 
-.probability-grid,
 .counts-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
-.probability-card,
 .counts-grid > div {
   flex-wrap: wrap;
   padding: 14px;
@@ -351,7 +348,6 @@ select {
   background: #fff8e9;
 }
 
-.probability-card strong,
 .counts-grid strong {
   width: 100%;
   font-size: 1.4rem;
@@ -446,7 +442,6 @@ select {
     position: static;
   }
 
-  .probability-grid,
   .counts-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -475,7 +470,6 @@ select {
   }
 
   .raw-row,
-  .probability-grid,
   .counts-grid {
     grid-template-columns: 1fr;
   }
